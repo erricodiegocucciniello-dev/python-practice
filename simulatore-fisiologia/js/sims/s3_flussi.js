@@ -351,9 +351,11 @@
       function frame(dt) {
         if (!sim) return;
         var dur = sim.t[sim.t.length - 1], speed = dur > 20 ? dur / 8 : 1;
+        if (!isFinite(dt)) return;
         tPlay = Math.min(dur, tPlay + dt * speed);
-        var i = Math.min(sim.t.length - 1, Math.round(tPlay / (sim.t[1] - sim.t[0])));
+        var step = sim.t[1] - sim.t[0], i = Math.max(0, Math.min(sim.t.length - 1, Math.round(tPlay / (step > 0 ? step : 1))));
         var V = sim.V[i], lysed = sim.lysed && sim.t[i] >= sim.tLysis;
+        if (!isFinite(V)) return; // mai passare valori non validi alla geometria 3D
         shape(Math.min(V, F.RBC.Vcrit), lysed);
         if (mesh) mesh.rotation.y += dt * 0.2;
         ro.set('v', lysed ? 'lisata' : F.fmt(V, 0) + ' fL');

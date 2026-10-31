@@ -30,13 +30,13 @@ if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
   if (unknown.length) failures.push('Simulatori citati ma non registrati: ' + unknown.join(', '));
   console.log(`Lezioni: ${lessons.length}, simulatori: ${sims.length}`);
 
-  const routes = [{ r: '', name: 'home' }]
-    .concat(lessons.map(l => ({ r: 'lezione/' + l.id, name: 'lezione_' + l.id })))
-    .concat(sims.map(s => ({ r: 'sim/' + s, name: 'sim_' + s })));
+  const routes = [{ r: 'inizio', name: 'home' }]
+    .concat(lessons.map(l => ({ r: 'lezione-' + l.id, name: 'lezione_' + l.id })))
+    .concat(sims.map(s => ({ r: 'sim-' + s, name: 'sim_' + s })));
 
   for (const { r, name } of routes) {
     errors = [];
-    await page.goto(url + '#/' + r);
+    await page.goto(url + '#' + r);
     await page.waitForTimeout(250);
     const h = await page.evaluate(() => document.body.scrollHeight);
     for (let y = 0; y < h + 1000; y += 500) { await page.evaluate(yy => window.scrollTo(0, yy), y); await page.waitForTimeout(90); }
@@ -72,14 +72,14 @@ if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
     if (shotDir) await page.screenshot({ path: path.join(shotDir, name + '.png'), fullPage: true });
   }
   // prova del tema scuro
-  await page.goto(url + '#/lezione/19');
+  await page.goto(url + '#lezione-19');
   await page.click('#themeBtn');
   await page.waitForTimeout(500);
   const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
   if (!theme) failures.push('cambio tema non riuscito');
   // prova su schermo da telefono
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(url + '#/lezione/15');
+  await page.goto(url + '#lezione-15');
   await page.waitForTimeout(800);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 2) failures.push('scorrimento orizzontale su telefono: ' + overflow + ' px');

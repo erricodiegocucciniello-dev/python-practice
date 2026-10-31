@@ -34,9 +34,9 @@
     var hash = location.hash;
     var ul = el('ul', { class: 'side-list' });
     if (sideMode === 'L') {
-      ul.appendChild(el('li', null, [el('a', { href: '#/', class: hash === '' || hash === '#/' ? 'active' : '' }, [el('span', { class: 'num', text: '⌂' }), el('span', { text: 'Inizio' })])]));
+      ul.appendChild(el('li', null, [el('a', { href: '#inizio', class: (hash === '' || hash === '#inizio') ? 'active' : '' }, [el('span', { class: 'num', text: '⌂' }), el('span', { text: 'Inizio' })])]));
       F.LESSONS.forEach(function (L) {
-        var href = '#/lezione/' + L.id;
+        var href = '#lezione-' + L.id;
         ul.appendChild(el('li', null, [el('a', { href: href, class: hash === href ? 'active' : '' }, [el('span', { class: 'num', text: lessonLabel(L) }), el('span', { text: L.title })])]));
       });
       sideList.appendChild(ul);
@@ -46,7 +46,7 @@
         var u = el('ul', { class: 'side-list' });
         Object.keys(F.sims).forEach(function (id) {
           var s = F.sims[id]; if (s.section !== S.id) return;
-          var href = '#/sim/' + id;
+          var href = '#sim-' + id;
           u.appendChild(el('li', null, [el('a', { href: href, class: hash === href ? 'active' : '' }, [el('span', { class: 'num', text: '▸' }), el('span', { text: s.title })])]));
         });
         sideList.appendChild(u);
@@ -92,7 +92,7 @@
     c.appendChild(el('h2', { class: 'section-title', text: 'Le lezioni' }));
     var g = el('div', { class: 'card-grid' });
     F.LESSONS.forEach(function (L) {
-      g.appendChild(el('a', { class: 'card', href: '#/lezione/' + L.id }, [
+      g.appendChild(el('a', { class: 'card', href: '#lezione-' + L.id }, [
         el('div', { class: 'kicker', text: 'Lezione ' + L.num }), el('h3', { text: L.title }), el('p', { text: L.card || '' })
       ]));
     });
@@ -104,7 +104,7 @@
       if (!list.length) return;
       g2.appendChild(el('div', { class: 'card' }, [
         el('div', { class: 'kicker', text: 'Lezioni ' + S.lessons }), el('h3', { text: S.title }),
-        el('div', { class: 'related', style: { marginTop: '6px' } }, list.map(function (id) { return el('a', { class: 'chip', href: '#/sim/' + id, text: F.sims[id].title }); }))
+        el('div', { class: 'related', style: { marginTop: '6px' } }, list.map(function (id) { return el('a', { class: 'chip', href: '#sim-' + id, text: F.sims[id].title }); }))
       ]));
     });
     c.appendChild(g2);
@@ -134,7 +134,7 @@
     (L.sims || []).forEach(function (s, k) {
       var sim = F.sims[s.id];
       var block = el('section', { class: 'sim-block' });
-      block.appendChild(el('h2', null, [el('span', { text: (s.title || (sim ? sim.title : s.id)) }), el('a', { class: 'tag', href: '#/sim/' + s.id, text: 'apri da solo' })]));
+      block.appendChild(el('h2', null, [el('span', { text: (s.title || (sim ? sim.title : s.id)) }), el('a', { class: 'tag', href: '#sim-' + s.id, text: 'apri da solo' })]));
       if (s.predict) block.appendChild(U.predict(s.predict));
       var host = el('div');
       block.appendChild(host);
@@ -150,13 +150,13 @@
       c.appendChild(el('h3', { class: 'section-title', text: 'Lezioni collegate' }));
       c.appendChild(el('div', { class: 'related' }, L.related.map(function (rid) {
         var R = F.LESSONS.find(function (x) { return x.id === rid; });
-        return R ? el('a', { class: 'chip', href: '#/lezione/' + R.id, text: R.num + ' · ' + R.title }) : null;
+        return R ? el('a', { class: 'chip', href: '#lezione-' + R.id, text: R.num + ' · ' + R.title }) : null;
       })));
     }
     var prev = F.LESSONS[idx - 1], next = F.LESSONS[idx + 1];
     c.appendChild(el('nav', { class: 'lesson-nav' }, [
-      prev ? el('a', { class: 'card', href: '#/lezione/' + prev.id }, [el('div', { class: 'kicker', text: '← Lezione ' + prev.num }), el('h3', { text: prev.title })]) : el('span'),
-      next ? el('a', { class: 'card', href: '#/lezione/' + next.id, style: { textAlign: 'right' } }, [el('div', { class: 'kicker', text: 'Lezione ' + next.num + ' →' }), el('h3', { text: next.title })]) : el('span')
+      prev ? el('a', { class: 'card', href: '#lezione-' + prev.id }, [el('div', { class: 'kicker', text: '← Lezione ' + prev.num }), el('h3', { text: prev.title })]) : el('span'),
+      next ? el('a', { class: 'card', href: '#lezione-' + next.id, style: { textAlign: 'right' } }, [el('div', { class: 'kicker', text: 'Lezione ' + next.num + ' →' }), el('h3', { text: next.title })]) : el('span')
     ]));
     return c;
   }
@@ -175,23 +175,24 @@
     var ls = lessonsUsing(id);
     if (ls.length) {
       c.appendChild(el('h3', { class: 'section-title', text: 'Usato nelle lezioni' }));
-      c.appendChild(el('div', { class: 'related' }, ls.map(function (L) { return el('a', { class: 'chip', href: '#/lezione/' + L.id, text: L.num + ' · ' + L.title }); })));
+      c.appendChild(el('div', { class: 'related' }, ls.map(function (L) { return el('a', { class: 'chip', href: '#lezione-' + L.id, text: L.num + ' · ' + L.title }); })));
     }
     return c;
   }
-  function pageNotFound() { return el('div', null, [el('h1', { text: 'Pagina non trovata' }), el('p', null, [el('a', { href: '#/', text: 'Torna all\'inizio' })])]); }
+  function pageNotFound() { return el('div', null, [el('h1', { text: 'Pagina non trovata' }), el('p', null, [el('a', { href: '#inizio', text: 'Torna all\'inizio' })])]); }
 
   function route() {
     cleanup();
     document.body.classList.remove('nav-open');
-    var h = location.hash.replace(/^#\/?/, ''), parts = h.split('/'), page;
-    if (parts[0] === 'lezione' && parts[1]) { page = pageLesson(decodeURIComponent(parts[1])); if (sideMode !== 'L') sideMode = 'L'; }
-    else if (parts[0] === 'sim' && parts[1]) { page = pageSim(decodeURIComponent(parts[1])); sideMode = 'A'; }
+    // indirizzi semplici (#lezione-13, #sim-ghk, #inizio): funzionano anche dentro la pagina pubblicata
+    var h = location.hash.replace(/^#/, ''), page, m;
+    if ((m = /^lezione-(.+)$/.exec(h))) { page = pageLesson(m[1]); sideMode = 'L'; }
+    else if ((m = /^sim-(.+)$/.exec(h))) { page = pageSim(m[1]); sideMode = 'A'; }
     else page = pageHome();
     content.innerHTML = '';
     content.appendChild(page);
     var t = page.querySelector('h1');
-    document.title = (t && h ? t.textContent + ' · ' : '') + 'Simulatore di Fisiologia';
+    document.title = (t && m ? t.textContent + ' · ' : '') + 'Simulatore di Fisiologia';
     G.scrollTo(0, 0);
     renderSide();
   }

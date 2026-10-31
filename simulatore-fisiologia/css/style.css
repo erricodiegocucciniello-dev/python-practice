@@ -65,7 +65,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+body { margin: 0; }
 body {
   background: var(--bg); color: var(--text); font-family: var(--font);
   font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased;
@@ -283,3 +283,14 @@ table.data td.n { text-align: right; font-variant-numeric: tabular-nums; }
 .box ul, .oneliner, .note, .feedback, .observe, .qtext { overflow-x: auto; overflow-y: hidden; }
 .predict, .quiz { max-width: 100%; overflow-x: auto; }
 .lesson-head .src, .card h3, .chip { overflow-wrap: anywhere; }
+
+/* telefoni con barre di sistema: margini di sicurezza (valgono 0 fuori dalle app per telefono) */
+.topbar { top: env(safe-area-inset-top, 0px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 50; background: var(--surface); }
+.sidebar { top: calc(56px + env(safe-area-inset-top, 0px)); height: calc(100vh - 56px - env(safe-area-inset-top, 0px)); padding-left: max(10px, env(safe-area-inset-left, 0px)); }
+main { padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left, 0px)); padding-right: max(clamp(16px, 4vw, 48px), env(safe-area-inset-right, 0px)); }
+@media (max-width: 900px) {
+  .sidebar { top: calc(56px + env(safe-area-inset-top, 0px)); height: auto; bottom: 0; }
+  .scrim { inset: calc(56px + env(safe-area-inset-top, 0px)) 0 0 0; }
+  main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
