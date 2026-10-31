@@ -275,3 +275,11 @@ table.data td.n { text-align: right; font-variant-numeric: tabular-nums; }
 .katex { font-size: 1.08em; }
 .err3d { padding: 20px; color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* formule larghe: scorrono dentro il loro riquadro invece di allargare la pagina */
+.two-col > * { min-width: 0; }
+.formula { max-width: 100%; }
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; margin: 0.4em 0; }
+.box ul, .oneliner, .note, .feedback, .observe, .qtext { overflow-x: auto; overflow-y: hidden; }
+.predict, .quiz { max-width: 100%; overflow-x: auto; }
+.lesson-head .src, .card h3, .chip { overflow-wrap: anywhere; }

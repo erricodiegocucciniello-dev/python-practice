@@ -55,7 +55,7 @@
       var sMg = U.slider({ label: '[Mg²⁺] esterno', min: 0, max: 12, step: 0.1, value: st.Mg, digits: 1, unit: 'mM', onInput: function (v) { st.Mg = v; run(); } });
       var bQ = el('div', { class: 'btn-row' }, [U.button('Ringer normale (Ca 2, Mg 1)', function () { sCa.set(2); sMg.set(1); }), U.button('Basso Ca²⁺ / alto Mg²⁺', function () { sCa.set(0.8); sMg.set(6.8); }), U.button('Nuova serie di stimoli', function () { st.seed++; run(); })]);
       var sCur = U.slider({ label: 'Curaro: recettori nicotinici bloccati', min: 0, max: 0.95, step: 0.05, value: 0, fmt: function (v) { return Math.round(v * 100) + '%'; }, onInput: function (v) { st.cur = v; run(); } });
-      var tMG = U.toggle({ label: 'Miastenia grave (−70% recettori, anticorpi)', value: false, onChange: function (v) { st.mg = v; run(); } });
+      var tMG = U.toggle({ label: 'Miastenia grave (anticorpi: circa −60% dei recettori)', value: false, onChange: function (v) { st.mg = v; run(); } });
       var tNeo = U.toggle({ label: 'Neostigmina (anticolinesterasico)', value: false, onChange: function (v) { st.neo = v; run(); } });
       [mSel.el, sCa.el, sMg.el, bQ, sCur.el, tMG.el, tNeo.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Rilascio binomiale da 2000 siti; probabilità secondo Dodge & Rahamimoff (1967): $p \\propto \\left(\\frac{[Ca]/K_{Ca}}{1 + [Ca]/K_{Ca} + [Mg]/K_{Mg}}\\right)^4$. Quanto = 0,4 mV (≈ 5000–7000 molecole di ACh), CV 20%. Correzione di Martin per la sommazione non lineare (forza elettromotrice 75 mV). Fibra: riposo −80 mV, soglia −60 mV. Stimolazione ripetitiva a 3 Hz con deplezione (15% del pool per impulso, recupero τ = 0,8 s). Fatt & Katz: fibra di 50 µm, R<sub>m</sub> = 4000 Ω·cm², R<sub>i</sub> = 250 Ω·cm (λ ≈ 1,4 mm, τ = 4 ms).'));
@@ -91,7 +91,7 @@
           ro.set('a', F.fmt(m, m < 10 ? 2 : 0)); ro.set('b', fails > 0 ? F.fmt(Math.log(400 / fails), 2) : 'nessun fallimento');
           ro.set('c', F.fmt(mean / 0.4, m < 10 ? 2 : 0) + (m > 20 ? ' (sottostimato: sommazione non lineare)' : '')); ro.set('d', F.fmt(fails / 400 * 100, 1) + '%');
         } else if (st.mode === 'sic') {
-          var rec = (1 - st.cur) * (st.mg ? 0.3 : 1), neo = st.neo ? 1.5 : 1, tau = st.neo ? 9 : 3, m0 = 200, thr = 20, Ed = 75;
+          var rec = (1 - st.cur) * (st.mg ? 0.42 : 1), neo = st.neo ? 1.5 : 1, tau = st.neo ? 9 : 3, m0 = 200, thr = 20, Ed = 75;
           var eppAmp = function (mm) { var lin = mm * 0.4 * rec * neo; return lin / (1 + lin / Ed); };
           // treno a 3 Hz con deplezione
           var R = 1, amps2 = [], ok = 0;

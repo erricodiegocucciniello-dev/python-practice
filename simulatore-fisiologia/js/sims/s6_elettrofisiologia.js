@@ -211,7 +211,7 @@
     short: 'Soglia, tutto-o-nulla, fasi del potenziale d\'azione, conduttanze, refrattarietà assoluta e relativa, codifica in frequenza, effetto della temperatura, del K⁺ esterno, di TTX e TEA.',
     mount: function (host, P) {
       var L = U.simLayout(host), st = {
-        mode: P.mode || 'single', I1: P.I1 === undefined ? 10 : P.I1, dur: P.dur || 1, gap: P.gap || 10, I2: P.I2 === undefined ? 10 : P.I2,
+        mode: P.mode || 'single', I1: P.I1 === undefined ? 10 : P.I1, dur: P.dur || 1, gap: P.gap || 10, I2: P.I2 === undefined ? 30 : P.I2,
         Idc: P.Idc === undefined ? 10 : P.Idc, T: P.T === undefined ? 6.3 : P.T, Ko: 1, ttx: 0, tea: 0, show: P.show || 'g', allornone: !!P.allornone
       };
       var mSel = U.seg({ label: 'Esperimento', value: st.mode, options: [['single', 'Uno stimolo'], ['pair', 'Due stimoli'], ['dc', 'Corrente continua']], onChange: function (v) { st.mode = v; vis(); run(); } });
