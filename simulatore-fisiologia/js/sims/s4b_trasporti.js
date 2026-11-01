@@ -118,26 +118,35 @@
       L.controls.appendChild(U.group('Bilancio energetico', [pSel.el, sNa.el, sKo.el, sV.el, sLum.el]));
       L.controls.appendChild(U.params('ΔG per spostare uno ione: $RT\\ln(C_{arrivo}/C_{partenza}) + zF\\Delta V$. ΔG dell\'ATP nella cellula ≈ −52 kJ/mol (ATP 2,25, ADP 0,25, Pᵢ 1,65 mM; Lehninger). Una pompa può lavorare solo se il ΔG richiesto per ciclo è minore di |ΔG<sub>ATP</sub>|: per questo le pompe sono "limitate dal gradiente". Ca²⁺ citosolico 100 nM, esterno 1,2 mM, nel reticolo ≈ 0,5 mM; pH citosolico 7,2.'));
       var status = U.status();
-      var scn = F.scene3d(L.main, { height: 320, camPos: [0, 1.5, 11] });
+      var scn = F.scene3d(L.main, { height: 380, camPos: [0, 0, 15.5], target: [0, -0.5, 0] });
       L.main.appendChild(status.el);
       var ro = U.readouts([{ key: 'req', label: 'Energia richiesta per ciclo', hl: true }, { key: 'atp', label: 'Energia da 1 ATP' }, { key: 'eff', label: 'Esito' }, { key: 'st', label: 'Stechiometria' }]);
       L.main.appendChild(ro.el);
       var THREE = G.THREE, body, gateIn, gateOut, phos, ouab, na = [], k = [], labP, labO;
       if (scn) {
-        var mem = new THREE.Mesh(new THREE.BoxGeometry(12, 2.4, 5), new THREE.MeshStandardMaterial({ color: 0xd9c9a3, transparent: true, opacity: 0.2, depthWrite: false })); scn.scene.add(mem);
+        var mem = new THREE.Mesh(new THREE.BoxGeometry(14, 3.2, 6), new THREE.MeshStandardMaterial({ color: 0xd9c9a3, transparent: true, opacity: 0.2, depthWrite: false })); scn.scene.add(mem);
         body = new THREE.Group();
-        var lob = F.mat(0x8e6cc4, { transparent: true, opacity: 0.8 });
-        var l1 = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 3.4, 20), lob); l1.position.x = -1.25; body.add(l1);
-        var l2 = l1.clone(); l2.position.x = 1.25; body.add(l2);
-        var cyto = new THREE.Mesh(new THREE.SphereGeometry(1.5, 20, 14), F.mat(0x7f5db8)); cyto.position.set(0, -2.6, 0); cyto.scale.set(1.4, 0.7, 1); body.add(cyto);
+        // subunità α: 10 eliche transmembrana attorno al percorso degli ioni, più i domini citosolici N, P, A
+        var hx = new THREE.CylinderGeometry(0.26, 0.26, 3.3, 12), hcol = [0x8e6cc4, 0x9a78cf, 0x7f5db8];
+        for (var h = 0; h < 10; h++) {
+          var an = h / 10 * Math.PI * 2, hm = new THREE.Mesh(hx, F.mat(hcol[h % 3], { transparent: true, opacity: 0.9 }));
+          hm.position.set(Math.cos(an) * 1.25, 0, Math.sin(an) * 0.85); body.add(hm);
+        }
+        var dom = function (r, x, y, z, col, sx) { var m = new THREE.Mesh(new THREE.SphereGeometry(r, 22, 16), F.mat(col)); m.position.set(x, y, z); m.scale.set(sx || 1, 0.85, 1); body.add(m); return m; };
+        var dP = dom(0.95, 0.4, -2.6, 0.1, 0x7f5db8, 1.15), dN = dom(0.85, -2.1, -3.7, 0.5, 0x4f86d0), dA = dom(0.7, 2.5, -3.5, -0.5, 0x3fa87f);
+        [[0.3, -1.7, 0.1, 0.45], [1.3, -1.9, -0.2, 0.35]].forEach(function (q) { var st2 = new THREE.Mesh(new THREE.CylinderGeometry(q[3] * 0.5, q[3] * 0.5, 1.5, 10), F.mat(0x6d4fa6)); st2.position.set(q[0], q[1], q[2]); body.add(st2); });
+        // subunità β: un'elica transmembrana e un grande dominio extracellulare glicosilato
+        var bh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 3.0, 10), F.mat(0xd98c3f)); bh.position.set(2.9, 0, 0.2); body.add(bh);
+        var bd = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 14), F.mat(0xe8a85b)); bd.position.set(2.9, 2.0, 0.2); bd.scale.set(1.1, 0.8, 1); body.add(bd);
+        scn.label(bd, 'subunità β', true); scn.label(dN, 'dominio N (lega ATP)', true); scn.label(dP, 'dominio P', true); scn.label(dA, 'dominio A', true);
         scn.scene.add(body);
         gateOut = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.6), F.mat(0x2e3a59)); gateOut.position.y = 1.55; scn.scene.add(gateOut);
         gateIn = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.6), F.mat(0x2e3a59)); gateIn.position.y = -1.55; scn.scene.add(gateIn);
-        phos = new THREE.Mesh(new THREE.SphereGeometry(0.35, 14, 10), F.mat(0xe8c547)); phos.position.set(0.6, -3.1, 0.9); scn.scene.add(phos);
+        phos = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), F.mat(0xe8c547)); phos.position.set(0.8, -2.0, 1.1); scn.scene.add(phos);
         ouab = new THREE.Mesh(new THREE.TorusKnotGeometry(0.35, 0.12, 40, 8), F.mat(0x23915a)); ouab.position.set(0, 2.2, 0); scn.scene.add(ouab);
         for (var i = 0; i < 3; i++) { var s = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), F.mat(0xd9480f)); scn.scene.add(s); na.push(s); }
         for (i = 0; i < 2; i++) { var q = new THREE.Mesh(new THREE.SphereGeometry(0.36, 14, 10), F.mat(0x3559c7)); scn.scene.add(q); k.push(q); }
-        var labP = scn.label(phos, 'P (Asp)', true), labO = scn.label(ouab, 'ouabaina', true);
+        var labP = scn.label(phos, 'P', true), labO = scn.label(ouab, 'ouabaina', true);
         var lo = new THREE.Object3D(); lo.position.set(-5, 2.3, 0); scn.scene.add(lo); scn.label(lo, 'esterno', true);
         var li = new THREE.Object3D(); li.position.set(-5, -2.3, 0); scn.scene.add(li); scn.label(li, 'citosol', true);
       }

@@ -680,6 +680,9 @@
         { label: 'Decremento del potenziale locale', tex: 'V(x) = V_0\\,e^{-x/\\lambda},\\qquad \\lambda = \\sqrt{\\frac{R_m\\,d}{4R_i}}' }
       ],
       sims: [
+        { id: 'tipineuroni', title: 'I tipi di neuroni (afferenti, efferenti, interneuroni)', preset: {},
+          predict: { q: "Quale tipo di neurone rappresenta circa il 99% di tutti i neuroni dell'asse cerebro-spinale dei Vertebrati?", options: ["gli interneuroni (internunciali, Golgi tipo II)", "i motoneuroni α (Golgi tipo I)", "i neuroni afferenti a T"], answer: 0, why: "Dalla slide: i neuroni di tipo II, cioè gli interneuroni, sono circa il 99% della popolazione neuronale; i neuroni efferenti sono di tipo I." },
+          observe: "negli afferenti a T il segnale non passa dal soma; negli efferenti il neurite è lungo (tipo I); negli interneuroni il neurite è breve e ramificato (tipo II)." },
         { id: 'neurone', title: 'Dal potenziale locale al potenziale d\'azione: il neurone', preset: {},
           predict: { q: "Tre sinapsi eccitatorie sul dendrite sono ciascuna sottosoglia. Attivate insieme, il neurone…", options: ["può raggiungere la soglia al segmento iniziale: i potenziali locali si sommano", "non può mai scaricare, perché ogni potenziale locale si spegne da solo", "scarica sempre tre potenziali d'azione, uno per sinapsi"], answer: 0, why: "I potenziali locali sono graduati e sommabili nello spazio e nel tempo: se la somma al segmento iniziale supera la soglia, nasce un PdA tutto-o-nulla." },
           observe: "nel grafico in basso la curva scende nel dendrite (potenziale locale, decremento) e poi resta alla stessa altezza in tutti i nodi (PdA, nessun decremento)." },

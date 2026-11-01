@@ -15,7 +15,7 @@ Per averlo online (anche dal telefono) puoi pubblicare la cartella con GitHub Pa
   - i simulatori **già impostati** sul concetto della lezione, ciascuno preceduto da una domanda "Prevedi prima di provare";
   - le note **Attenzione** dove una slide contiene un errore, con il valore corretto;
   - un quiz di verifica con spiegazioni e i collegamenti alle lezioni correlate.
-- **Per argomento**: i 41 simulatori raggruppati in 9 sezioni. Ogni simulatore indica in quali lezioni compare.
+- **Per argomento**: i 43 simulatori raggruppati in 9 sezioni. Ogni simulatore indica in quali lezioni compare.
 
 | Sezione | Lezioni | Simulatori |
 |---|---|---|
@@ -102,7 +102,7 @@ index.html                 pagina unica (apribile con doppio clic)
 css/style.css              stile, tema chiaro/scuro
 js/core/                   motore numerico (funziona anche in Node per i test)
 js/ui/                     componenti, grafici, scene 3D, riquadro di spiegazione (explain.js)
-js/sims/                   i 41 simulatori
+js/sims/                   i 43 simulatori
 js/lessons.js              contenuti delle 31 lezioni
 js/lessons-prof.js         riquadri «Detto a lezione» (ciò che la prof sottolinea, lezioni 1–13)
 js/quiz/                   prove d'esame: motore, pagina, archivio di domande, domande calcolate

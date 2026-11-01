@@ -145,6 +145,32 @@
       var sRi = U.slider({ label: 'Resistività del citoplasma R<sub>i</sub>', min: 30, max: 400, step: 5, value: st.Ri, digits: 0, unit: 'Ω·cm', onInput: function (v) { st.Ri = v; run(); } });
       [sD.el, sRm.el, sRi.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Cavo passivo semi-infinito: $\\lambda = \\sqrt{\\frac{R_m d}{4 R_i}}$, $\\tau = R_m C_m$ (C<sub>m</sub> = 1 µF/cm²). A regime $V(x) = V_0 e^{-x/\\lambda}$. La risposta a un breve impulso è calcolata numericamente con un cavo a 120 compartimenti.'));
+      var cab = { lam: 700, Lmax: 2800, d: st.d };
+      var cabCv = U.canvas2d(L.main, 150, function (ctx, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        var css = U.css, muted = css('--muted'), txt = css('--text'), x0 = 46, x1 = w - 20, cy = 70, th = 14 + 18 * Math.sqrt(cab.d / 20);
+        var X = function (um) { return x0 + um / cab.Lmax * (x1 - x0); };
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark' || (document.documentElement.getAttribute('data-theme') !== 'light' && G.matchMedia && G.matchMedia('(prefers-color-scheme: dark)').matches);
+        // tubo colorato con il potenziale a regime V(x) = V0·e^(−x/λ) (da −40 a −65 mV)
+        for (var i = 0; i < 120; i++) {
+          var um = (i + 0.5) / 120 * cab.Lmax, v = -65 + 28 * Math.exp(-um / cab.lam);
+          ctx.fillStyle = F.figs.vcol(v); ctx.fillRect(X(um) - (x1 - x0) / 240 - 0.5, cy - th / 2, (x1 - x0) / 120 + 1, th);
+        }
+        ctx.strokeStyle = dark ? 'rgba(220,225,235,0.5)' : 'rgba(40,50,70,0.55)'; ctx.lineWidth = 1.6; ctx.strokeRect(x0, cy - th / 2, x1 - x0, th);
+        // perdite attraverso la membrana: frecce che si accorciano con la distanza
+        for (var k = 0; k < 14; k++) {
+          var um2 = (k + 0.5) / 14 * cab.Lmax, a = 22 * Math.exp(-um2 / cab.lam) + 3;
+          U.arrow(ctx, X(um2), cy + th / 2 + 2, X(um2), cy + th / 2 + 2 + a, css('--bad'), 1.4, 5); U.arrow(ctx, X(um2), cy - th / 2 - 2, X(um2), cy - th / 2 - 2 - a, css('--bad'), 1.4, 5);
+        }
+        // elettrodo che inietta corrente in x = 0
+        ctx.strokeStyle = css('--c1'); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x0 - 26, cy - 40); ctx.lineTo(x0, cy); ctx.stroke();
+        ctx.fillStyle = css('--c1'); ctx.beginPath(); ctx.arc(x0, cy, 3.5, 0, 6.283); ctx.fill();
+        ctx.font = '11.5px ' + css('--font'); ctx.fillStyle = css('--c1'); ctx.textAlign = 'left'; ctx.fillText('corrente iniettata', 4, 16);
+        // λ, 2λ, 3λ
+        ctx.fillStyle = css('--ok'); ctx.strokeStyle = css('--ok'); ctx.lineWidth = 1.2; ctx.textAlign = 'center';
+        for (var m = 1; m <= 3; m++) { var xm = X(m * cab.lam); if (xm > x1) break; ctx.beginPath(); ctx.moveTo(xm, cy - th / 2 - 4); ctx.lineTo(xm, h - 22); ctx.stroke(); ctx.fillText((m === 1 ? 'λ' : m + 'λ') + (m === 1 ? ' (37%)' : ''), xm, h - 8); }
+        ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.fillText('frecce rosse: corrente che esce dalla membrana (si perde) · colori: potenziale a regime', x1, 16);
+      });
       var ro = U.readouts([{ key: 'l', label: 'Costante di spazio λ', hl: true }, { key: 't', label: 'Costante di tempo τ' }, { key: 'x', label: 'Ampiezza a 1 mm (regime)' }]);
       L.main.appendChild(ro.el);
       var p1 = U.plot(L.main, { title: 'Decremento con la distanza (corrente costante in x = 0)', xlabel: 'distanza (µm)', ylabel: 'V / V₀', height: 210, ylim: [0, 1.02] });
@@ -153,6 +179,7 @@
         var lam = Math.sqrt(st.Rm * st.d * 1e-4 / (4 * st.Ri)) * 1e4, tau = st.Rm * 1e-3; // µm, ms
         ro.set('l', F.fmt(lam, 0) + ' µm'); ro.set('t', F.fmt(tau, 1) + ' ms'); ro.set('x', F.fmt(Math.exp(-1000 / lam) * 100, 1) + '% di V₀');
         var Lmax = Math.max(500, 4 * lam), xs = F.linspace(0, Lmax, 200);
+        cab.lam = lam; cab.Lmax = Lmax; cab.d = st.d; cabCv.redraw();
         p1.update({ series: [{ x: xs, y: xs.map(function (x) { return Math.exp(-x / lam); }), color: '--c1' }], vlines: [{ x: lam, label: 'λ (37%)', color: '--ok' }], hlines: [{ y: 1 / Math.E, color: '--ok' }], xlim: [0, Lmax] });
         var c = F.Cable.passive({ d_um: st.d, length_um: Math.min(4 * lam, 20000), n: 120, Ri: st.Ri, Rm: st.Rm });
         c.reset(-65, false);
@@ -191,7 +218,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { p1.dispose(); p2.dispose(); } };
+      return { destroy: function () { cabCv.dispose(); p1.dispose(); p2.dispose(); } };
     }
   });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

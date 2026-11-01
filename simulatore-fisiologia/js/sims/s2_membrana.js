@@ -56,8 +56,8 @@
         var water = new THREE.Mesh(new THREE.PlaneGeometry(N * S + 2, N * S + 2), new THREE.MeshBasicMaterial({ color: 0x4aa3df, transparent: true, opacity: 0.06, side: THREE.DoubleSide }));
         water.rotation.x = -Math.PI / 2; water.position.y = 3.2; scn.scene.add(water);
         var w2 = water.clone(); w2.position.y = -3.2; scn.scene.add(w2);
-        var lo = new THREE.Object3D(); lo.position.set(-half - 2.5, 3.6, -half); scn.scene.add(lo); scn.label(lo, 'esterno');
-        var li = new THREE.Object3D(); li.position.set(-half - 2.5, -3.6, -half); scn.scene.add(li); scn.label(li, 'citosol');
+        var lo = new THREE.Object3D(); lo.position.set(-half - 4.5, 3.6, -half); scn.scene.add(lo); scn.label(lo, 'esterno');
+        var li = new THREE.Object3D(); li.position.set(-half - 4.5, -3.6, -half); scn.scene.add(li); scn.label(li, 'citosol');
       }
       function buildProteins() {
         var redM = F.mat(0xc0504d), grM = F.mat(0x8e6cc4), orM = F.mat(0xd98c3f), teal = F.mat(0x2e9e8f);
@@ -73,7 +73,9 @@
         // proteina ancorata al GPI (versante esterno)
         var gpi = add(new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 12), teal), -3, 4.1, 3.2);
         add(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.5, 6), teal), -3, 2.9, 3.2);
-        labels.push(scn.label(h1, 'α-elica singola'), scn.label(g7, '7 segmenti TM'), scn.label(per, 'periferica (estrinseca)'), scn.label(gpi, 'ancorata al GPI'));
+        // le etichette stanno fuori dal doppio strato, in alto o in basso, per non coprirsi a vicenda
+        var anc = function (x, y, z) { var o = new THREE.Object3D(); o.position.set(x, y, z); scn.scene.add(o); return o; };
+        labels.push(scn.label(anc(-3.5, 4.6, -3.5), 'α-elica singola'), scn.label(anc(3, 6.8, 3), '7 segmenti TM'), scn.label(anc(2.8, -5.4, -2.5), 'periferica (estrinseca)'), scn.label(anc(-3, 6.6, 3.2), 'ancorata al GPI'));
       }
       function rebuildLipids() {
         if (!scn) return;

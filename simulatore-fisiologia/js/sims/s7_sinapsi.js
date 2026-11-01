@@ -19,6 +19,7 @@
       [tSel.el, fSel.el, sGc.el, tR.el, sCE.el, sCG.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Due cellule passive (100 MΩ, 100 pF). Elettrica: corrente di giunzione $g_c(V_1 - V_2)$; coefficiente di accoppiamento a regime $k = g_c/(g_c + g_L)$. Chimica: il potenziale d\'azione presinaptico (Hodgkin-Huxley, 18,5 °C) dopo un ritardo sinaptico di 0,5 ms (ingresso di Ca²⁺, esocitosi, diffusione) attiva una conduttanza postsinaptica (funzione alfa, τ = 1,5 ms).'));
       U.texify(L.controls);
+      var fig = F.figs.synapse(L.main);
       var ro = U.readouts([{ key: 'a', label: '', hl: true }, { key: 'b', label: '' }, { key: 'c', label: '' }]);
       L.main.appendChild(ro.el);
       var plot = U.plot(L.main, { title: 'Potenziale delle due cellule', xlabel: 'tempo (ms)', ylabel: 'Vm (mV)', height: 260 });
@@ -31,6 +32,7 @@
         if (st.type === 'el') {
           var r = F.gapPair({ gc: st.gc, rectify: st.rect, inject: st.from, I: function (t) { return t > 5 && t < 45 ? 150 : 0; }, tmax: 60 });
           plot.update({ series: [{ name: 'cellula 1', x: r.t, y: r.V1, color: '--c1' }, { name: 'cellula 2', x: r.t, y: r.V2, color: '--na' }], ylim: [-70, -40] });
+          fig.set({ type: 'el', t1: r.t, V1: r.V1, t2: r.t, V2: r.V2, tmax: 60, gc: st.gc, rect: st.rect, from: st.from }); fig.restart();
           var i = Math.floor(r.t.length * 0.7), dv1 = r.V1[i] + 65, dv2 = r.V2[i] + 65;
           labs('Coefficiente di accoppiamento', 'Ritardo', 'Direzione');
           ro.set('a', F.fmt(st.from === 1 ? dv2 / dv1 : dv1 / dv2, 2));
@@ -43,6 +45,7 @@
           if (st.from === 2) post = F.pspCell({ syns: [], tmax: 40 });
           var inj2 = st.from === 2 ? F.gapPair({ gc: 0, inject: 2, I: function (t) { return t > 5 && t < 25 ? 150 : 0; }, tmax: 40 }) : null;
           plot.update({ series: [{ name: 'presinaptica (cellula 1)', x: hh.t, y: hh.V, color: '--c1' }, { name: 'postsinaptica (cellula 2)', x: inj2 ? inj2.t : post.t, y: inj2 ? inj2.V2 : post.V, color: '--na' }], ylim: [-85, 50], vlines: tPk !== null ? [{ x: tPk, label: 'picco presinaptico' }, { x: tPk + 0.5, label: 'risposta', dy: 14 }] : [] });
+          fig.set({ type: 'ch', t1: hh.t, V1: hh.V, t2: inj2 ? inj2.t : post.t, V2: inj2 ? inj2.V2 : post.V, tmax: 40, t0: tPk !== null && st.from === 1 ? tPk + 0.5 : -1e9, from: st.from, E: st.chemE, tau: 1.5 }); fig.restart();
           var amp = Math.max.apply(null, post.V) + 65, amin = Math.min.apply(null, post.V) + 65;
           labs('Potenziale postsinaptico', 'Ritardo sinaptico', 'Direzione');
           ro.set('a', st.from === 2 ? 'la cellula 1 non risponde' : (st.chemE === 0 ? 'PPSE +' + F.fmt(amp, 1) + ' mV' : 'PPSI ' + F.fmt(amin, 1) + ' mV'));
@@ -76,7 +79,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { plot.dispose(); } };
+      return { destroy: function () { fig.dispose(); plot.dispose(); } };
     }
   });
 
@@ -118,7 +121,8 @@
         for (i = 0; i < 3; i++) { var tr = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 0.3), F.mat(0x2e9e8f)); tr.position.set(-2.7 + i * 2.7, cleftY + cleftH / 2 - 0.05, 1.9); scn.scene.add(tr); transp.push(tr); }
         for (i = 0; i < 4; i++) { var ae = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.06, 6, 12), F.mat(0xd9480f)); ae.position.set(-2.2 + i * 1.5, cleftY - 0.05, -1.7); ae.rotation.x = Math.PI / 2; scn.scene.add(ae); ache.push(ae); }
         var lab = function (obj, txt) { scn.label(obj, txt, true); };
-        lab(caCh[3], 'canale Ca²⁺ (tipo N, P/Q)'); lab(rec[10], 'recettori postsinaptici'); lab(axon, 'terminale presinaptico');
+        var anc = function (x, y, z) { var o = new THREE.Object3D(); o.position.set(x, y, z); scn.scene.add(o); return o; };
+        lab(anc(-3.9, 0.55, 1.3), 'canale Ca²⁺ (tipo N, P/Q)'); lab(anc(0.3, -1.45, 2.4), 'recettori postsinaptici'); lab(axon, 'terminale presinaptico');
         st.labT = scn.label(transp[2], 'trasportatore', true); st.labA = scn.label(ache[0], 'AChE', true);
         st.labTr = transp; st.labAe = ache;
       }
@@ -257,6 +261,7 @@
       var tF = U.toggle({ label: 'Registra a −60, −20 e +10 mV (come nella figura della lezione)', value: st.fam, onChange: function (v) { st.fam = v; run(); } });
       [rSel.el, sV.el, sG.el, sCl.el, tF.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Cellula passiva (100 MΩ, 100 pF, riposo −65 mV) mantenuta al potenziale scelto con un\'iniezione di corrente costante; conduttanza sinaptica a funzione alfa. E<sub>rev</sub>: cationici ≈ 0 mV; Cl⁻ da Nernst (Cl⁻ esterno 120 mM, 37 °C); GABA-B/GIRK = E<sub>K</sub> (−90 mV). Nei neuroni immaturi il Cl⁻ interno è alto (NKCC1) e il GABA <i>depolarizza</i>.'));
+      var fig = F.figs.channel(L.main);
       var ro = U.readouts([{ key: 'e', label: 'Potenziale di inversione', hl: true }, { key: 'a', label: 'Risposta' }, { key: 'k', label: 'Tipo' }]);
       L.main.appendChild(ro.el);
       var plot = U.plot(L.main, { title: 'Potenziale postsinaptico', xlabel: 'tempo (ms)', ylabel: 'Vm (mV)', height: 240 });
@@ -279,6 +284,7 @@
         var hs = F.linspace(-100, 40, 29), as = hs.map(function (V) { return amp(trace(V), V); });
         piv.update({ series: [{ x: hs, y: as, color: '--c1' }, { x: [st.Vh], y: [amp(trace(st.Vh), st.Vh)], type: 'points', color: '--na', r: 6 }], vlines: [{ x: E, label: 'E rev', color: '--ok' }], hlines: [] });
         var a = amp(trace(st.Vh), st.Vh);
+        fig.set({ E: E, Vh: st.Vh, tmax: (st.rec === 'gabab' || st.rec === 'nmda') ? 250 : 80, tau: recs[st.rec][1], ion: (st.rec === 'gabaa' || st.rec === 'gly') ? 'cl' : (st.rec === 'gabab' ? 'k' : 'cat'), ionLabel: (st.rec === 'gabaa' || st.rec === 'gly') ? 'canale per il Cl⁻' : (st.rec === 'gabab' ? 'canale GIRK: K⁺' : (st.rec === 'nmda' ? 'canale cationico (Na⁺, Ca²⁺; blocco Mg²⁺)' : 'canale cationico (Na⁺ ↓, K⁺ ↑)')) });
         ro.set('e', F.fmt(E, 1) + ' mV'); ro.set('a', (a >= 0 ? '+' : '') + F.fmt(a, 2) + ' mV');
         var excit = E > -50;
         ro.set('k', Math.abs(E + 65) < 4 ? 'inibizione "di shunt" (E ≈ riposo): nessuna variazione visibile, ma la cellula diventa meno eccitabile' : (excit ? 'eccitatorio: porta la cellula verso la soglia (≈ −50 mV)' : 'inibitorio: allontana dalla soglia'));
@@ -318,7 +324,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { plot.dispose(); piv.dispose(); } };
+      return { destroy: function () { fig.dispose(); plot.dispose(); piv.dispose(); } };
     }
   });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

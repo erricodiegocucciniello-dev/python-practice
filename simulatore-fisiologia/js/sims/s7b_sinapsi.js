@@ -24,6 +24,7 @@
       var sD = U.slider({ label: 'Durata della scarica', min: 0.05, max: 2, step: 0.05, value: 0.5, digits: 2, unit: 's', onInput: function (v) { st.dur = v; run(); } });
       [dSel.el, sF.el, sD.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Modello di Wightman per la dopamina nello striato: ogni impulso libera ≈ 0,1 µM; ricaptazione da DAT con V<sub>max</sub> = 4 µM/s e K<sub>m</sub> = 0,2 µM (Michaelis-Menten). Cocaina: inibitore competitivo di DAT (1 µM, K<sub>i</sub> ≈ 0,3 µM). Anfetamina: substrato competitivo che inverte il trasportatore (efflusso) e svuota le vescicole tramite VMAT. Reserpina: blocca VMAT. La dopamina non attraversa la barriera ematoencefalica: in terapia si usa la L-DOPA. Modello didattico: i valori dei farmaci sono indicativi.'));
+      var fig = F.figs.dopamine(L.main);
       var ro = U.readouts([{ key: 'p', label: 'Picco di dopamina', hl: true }, { key: 'h', label: 'Tempo di dimezzamento dopo la scarica' }, { key: 'b', label: 'Livello finale (tonico)' }]);
       L.main.appendChild(ro.el);
       var plot = U.plot(L.main, { title: 'Dopamina nella fessura sinaptica', xlabel: 'tempo (s)', ylabel: '[DA] (µM)', height: 260 });
@@ -36,6 +37,8 @@
         var o = Object.assign({ freq: st.f, trainDur: st.dur, tmax: 6 }, drugs[st.drug][1]);
         var r = F.monoamine(o), c = F.monoamine({ freq: st.f, trainDur: st.dur, tmax: 6 });
         plot.update({ series: [{ name: 'controllo', x: c.t, y: c.DA, color: '--faint', dash: [5, 4] }, { name: drugs[st.drug][0], x: r.t, y: r.DA, color: '--c1' }], spans: [{ x0: 1, x1: 1 + st.dur, color: U.css('--warn'), alpha: 0.1, label: 'scarica' }], ylim: [0, null] });
+        var evs = []; for (var q = 0; q < st.dur * st.f; q++) evs.push(1 + q / st.f);
+        fig.set({ t: r.t, DA: r.DA, tmax: r.t[r.t.length - 1], drug: st.drug, peak: Math.max(0.05, Math.max.apply(null, c.DA), Math.max.apply(null, r.DA)), events: evs }); fig.restart();
         ro.set('p', F.fmt(Math.max.apply(null, r.DA), 2) + ' µM'); ro.set('h', F.fmt(half(r) * 1000, 0) + ' ms'); ro.set('b', F.fmt(r.DA[r.DA.length - 1], 3) + ' µM');
       }
       run();
@@ -72,7 +75,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { plot.dispose(); } };
+      return { destroy: function () { fig.dispose(); plot.dispose(); } };
     }
   });
 
@@ -93,6 +96,7 @@
       [mSel.el, sCa.el, sMg.el, bQ, sCur.el, tMG.el, tNeo.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Rilascio binomiale da 2000 siti; probabilità secondo Dodge & Rahamimoff (1967): $p \\propto \\left(\\frac{[Ca]/K_{Ca}}{1 + [Ca]/K_{Ca} + [Mg]/K_{Mg}}\\right)^4$. Quanto = 0,4 mV (≈ 5000–7000 molecole di ACh), CV 20%. Correzione di Martin per la sommazione non lineare (forza elettromotrice 75 mV). Fibra: riposo −80 mV, soglia −60 mV. Stimolazione ripetitiva a 3 Hz con deplezione (15% del pool per impulso, recupero τ = 0,8 s). Fatt & Katz: fibra di 50 µm, R<sub>m</sub> = 4000 Ω·cm², R<sub>i</sub> = 250 Ω·cm (λ ≈ 1,4 mm, τ = 4 ms).'));
       U.texify(L.controls);
+      var fig = F.figs.nmj(L.main);
       var ro = U.readouts([{ key: 'a', label: '', hl: true }, { key: 'b', label: '' }, { key: 'c', label: '' }, { key: 'd', label: '' }]);
       L.main.appendChild(ro.el);
       var p1 = U.plot(L.main, { title: '', xlabel: '', ylabel: '', height: 230 });
@@ -101,6 +105,7 @@
       function vis() {
         [sCa.el, sMg.el, bQ].forEach(function (e) { e.style.display = st.mode === 'quanti' ? '' : 'none'; });
         [sCur.el, tMG.el, tNeo.el].forEach(function (e) { e.style.display = st.mode === 'sic' ? '' : 'none'; });
+        fig.el.style.display = st.mode === 'dist' ? 'none' : '';
       }
       function run() {
         if (st.mode === 'quanti') {
@@ -115,6 +120,7 @@
             ser.push({ x: xs, y: xs.map(function (x) { return 400 * h.width * F.quantalPDF(x, m, 0.4, 0.08); }), color: '--na', name: 'previsione di Poisson' });
             ser.push({ x: [0.02], y: [fails], type: 'bars', color: '--muted', barWidth: h.width, name: 'fallimenti' });
           }
+          fig.set({ p: Math.min(1, Math.log10(1 + m) / Math.log10(201)), cur: 0, mg: false, neo: false, rec: 1 });
           p1.o.title = 'Istogramma delle ampiezze (400 stimoli)'; p1.o.xlabel = 'ampiezza (mV)'; p1.o.ylabel = 'n. di risposte';
           p1.update({ series: ser, ylim: [0, null], vlines: m <= 20 ? [0.4, 0.8, 1.2, 1.6].map(function (x, i) { return { x: x, label: (i + 1) + 'q', color: '--muted' }; }) : [], hlines: [] });
           var mp = F.mepps({ rate: 1, duration: 8000, q: 0.4, seed: st.seed + 5 }), d = F.decimate(Array.from(mp.t).map(function (t) { return t / 1000; }), Array.from(mp.V), 1500);
@@ -134,6 +140,7 @@
             R *= (1 - 0.15);
           }
           var a1 = amps2[0], ts = F.linspace(0, 30, 301), epp = ts.map(function (t) { return t < 1 ? 0 : a1 * (Math.exp(-(t - 1) / tau) - Math.exp(-(t - 1) / 0.6)) / 0.75; });
+          fig.set({ p: 0.95, cur: st.cur, mg: st.mg, neo: st.neo, rec: rec });
           var ap = a1 >= thr;
           var Vm = epp.map(function (v, i) { var t = ts[i]; return ap && t > 2 && t < 6 ? -80 + Math.max(v, 110 * Math.exp(-Math.pow((t - 3) / 0.7, 2))) : -80 + v; });
           p1.o.title = 'Potenziale di placca (singolo stimolo)'; p1.o.xlabel = 'tempo (ms)'; p1.o.ylabel = 'Vm (mV)';
@@ -199,7 +206,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { p1.dispose(); p2.dispose(); } };
+      return { destroy: function () { fig.dispose(); p1.dispose(); p2.dispose(); } };
     }
   });
 
@@ -230,25 +237,10 @@
       var holder = el('div'); L.main.appendChild(holder); L.main.appendChild(ro.el);
       var plot = U.plot(L.main, { title: 'Registrazioni', xlabel: 'tempo (ms)', ylabel: 'Vm (mV)', height: 250 });
       var cell = F.Cable.ballStick({});
-      var cv = U.canvas2d(holder, 140, function (ctx, w, h) {
-        var css = U.css; ctx.clearRect(0, 0, w, h);
-        var x0 = 30, xs = w * 0.62, y = h / 2, sx = function (um) { return xs - 18 - um / 800 * (xs - 18 - x0); };
-        ctx.strokeStyle = css('--muted'); ctx.lineWidth = 6; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(xs, y); ctx.stroke();
-        ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xs, y); ctx.lineTo(w - 20, y); ctx.stroke();
-        ctx.fillStyle = css('--c4'); ctx.beginPath(); ctx.arc(xs, y, 20, 0, 6.283); ctx.fill();
-        ctx.fillStyle = css('--na'); ctx.fillRect(xs + 22, y - 3, 40, 6);
-        ctx.font = '12px ' + css('--font'); ctx.textAlign = 'center'; ctx.fillStyle = css('--text');
-        ctx.fillText('dendrite', (x0 + xs) / 2, y + 26); ctx.fillText('soma', xs, y + 36); ctx.fillText('segmento iniziale → assone', xs + 90, y + 22);
-        var syn = function (um, col, lab, on) {
-          if (!on) return; var x = sx(um);
-          ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x - 9, y - 26); ctx.lineTo(x + 9, y - 26); ctx.closePath(); ctx.fill();
-          ctx.fillStyle = css('--text'); ctx.fillText(lab, x, y - 32);
-        };
-        syn(st.e1, css('--c3'), 'A' + (st.pre ? ' (inib. presinaptica)' : ''), true);
-        syn(st.e2, css('--c3'), 'B', st.onE2);
-        syn(st.i1, css('--bad'), 'C (inib.)', st.onI);
-        ctx.fillStyle = css('--c1'); ctx.beginPath(); ctx.arc(xs, y - 30, 4, 0, 6.283); ctx.fill(); ctx.fillText('elettrodo', xs + 32, y - 40);
+      var drawMx = null;
+      var cv = U.canvas2d(holder, function (w) { return Math.round(Math.max(190, Math.min(250, w * 0.3))); }, function (ctx, w, h) {
+        F.figs.miniNeuron(ctx, w, h, drawMx && { nDend: cell.nDend, Ld: 800, somaIndex: cell.somaIndex, mx: drawMx, syn: [
+          { um: st.e1, label: 'A', kind: 'E', on: true, pre: st.pre }, { um: st.e2, label: 'B', kind: 'E', on: st.onE2 }, { um: st.i1, label: 'C (inib.)', kind: 'I', on: st.onI }] });
       });
       function idx(um) { return Math.max(0, Math.min(cell.nDend - 1, cell.nDend - 1 - Math.round(um / 800 * cell.nDend))); }
       function run() {
@@ -258,7 +250,7 @@
         for (var k = 0; k < st.rep; k++) events.push({ i: idx(st.e1), t: 5 + k * st.gap, g: st.g * 1e-6 * (st.pre ? 0.3 : 1), E: 0 });
         if (st.onE2) events.push({ i: idx(st.e2), t: 5 + st.dt, g: st.g * 1e-6, E: 0 });
         if (st.onI) events.push({ i: idx(st.i1), t: 4, g: 3e-6, E: st.inhE, tau: 5 });
-        var T = [], Vs = [], Va = [], vmax = -999, ap = false;
+        var T = [], Vs = [], Va = [], vmax = -999, ap = false, mxA = new Float64Array(cell.n).fill(-200);
         for (var t = 0; t <= tmax; t += dt) {
           cell.gSyn.fill(0);
           events.forEach(function (e) { var g = e.g * F.alphaFn(t - e.t, e.tau || 1.5); cell.ESyn[e.i] = (cell.gSyn[e.i] * cell.ESyn[e.i] + g * e.E) / Math.max(1e-30, cell.gSyn[e.i] + g); cell.gSyn[e.i] += g; });
@@ -266,12 +258,13 @@
           T.push(t); Vs.push(cell.V[soma]); Va.push(cell.V[axon]);
           if (cell.V[soma] > vmax) vmax = cell.V[soma];
           if (cell.V[axon] > 0) ap = true;
+          for (var q = 0; q < cell.n; q++) if (cell.V[q] > mxA[q]) mxA[q] = cell.V[q];
         }
         plot.update({ series: [{ name: 'soma', x: T, y: Vs, color: '--c1' }, { name: 'assone', x: T, y: Va, color: '--na', dash: [4, 3] }], hlines: [{ y: Vr, label: 'riposo', color: '--muted', align: 'left' }], ylim: [-80, 50] });
         ro.set('ep', ap ? 'soglia superata' : '+' + F.fmt(vmax - Vr, 2) + ' mV');
         ro.set('ap', ap ? '<span style="color:var(--ok)">sì</span>' : 'no');
         ro.set('l', F.fmt(cell.lambda_um, 0) + ' µm');
-        cv.redraw();
+        drawMx = mxA; cv.redraw();
       }
       run();
       /*EXPLAIN-START*/

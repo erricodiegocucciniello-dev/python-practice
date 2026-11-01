@@ -37,6 +37,34 @@
       function glom(extra) { return F.glomerulus(opts(Object.assign({ Raff: st.Raff * autoK() }, extra || {}))); }
       L.controls.appendChild(U.params('Filtrazione calcolata integrando la legge di Starling lungo il capillare glomerulare: $dQ = K_f\\,(P_{GC} - P_{BS} - \\pi_{GC})\\,dx$, con π<sub>GC</sub> che sale perché le proteine si concentrano (Landis-Pappenheimer: $\\pi = 2{,}1C + 0{,}16C^2 + 0{,}009C^3$). Resistenze calibrate su: flusso ematico renale 1,1 L/min, P<sub>GC</sub> 55 mmHg, GFR 125 mL/min; K<sub>f</sub> calibrato di conseguenza. P<sub>GC</sub> di riferimento: le slide indicano 45–50 mmHg, altri testi (Guyton) 60 mmHg. L\'autoregolazione (miogena, feedback tubulo-glomerulare) è <b>facoltativa</b>: spenta, si vedono gli effetti diretti; accesa, la resistenza dell\'afferente si adatta in modo da mantenere il flusso di quello a 100 mmHg tra 80 e 180 mmHg di pressione arteriosa (fuori da questo intervallo l\'autoregolazione non basta).'));
       U.texify(L.controls);
+      var gl = null;
+      var glCv = U.canvas2d(L.main, function (w) { return Math.round(Math.max(210, Math.min(280, w * 0.3))); }, function (ctx, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        if (!gl) return;
+        var css = U.css, muted = css('--muted'), txt = css('--text'), pr = gl.profile, n = pr.x.length - 1, s2 = Math.max(0.75, Math.min(1.05, w / 700));
+        var cx = w * 0.42, cy = h * 0.6, R = Math.min(h * 0.33, w * 0.2);
+        var rA = Math.max(3, 9 / Math.pow(st.Raff, 0.6)), rE = Math.max(2.5, 8 / Math.pow(st.Reff, 0.6)); // arteriole più strette con più resistenza
+        // capsula di Bowman
+        ctx.fillStyle = 'rgba(180,200,230,0.18)'; ctx.strokeStyle = 'rgba(70,90,130,0.7)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill(); ctx.stroke();
+        // gomitolo capillare: arteriola afferente → anse → efferente
+        var ax = w * 0.06, ay = cy - R * 0.55;
+        ctx.lineCap = 'round'; ctx.strokeStyle = '#d4584a'; ctx.lineWidth = rA * 2 * s2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(cx - R * 0.78, ay); ctx.stroke();
+        var loops = [[-0.45, -0.25], [0.05, -0.3], [-0.3, 0.2], [0.3, 0.05], [0.0, 0.42]];
+        ctx.lineWidth = 7 * s2; loops.forEach(function (q, i) { ctx.strokeStyle = i < 2 ? '#d4584a' : '#9b3f8f'; ctx.beginPath(); ctx.arc(cx + q[0] * R, cy + q[1] * R, R * 0.17, 0, 6.283); ctx.stroke(); });
+        ctx.strokeStyle = '#d4584a'; ctx.lineWidth = 6 * s2; ctx.beginPath(); ctx.moveTo(cx - R * 0.78, ay); ctx.quadraticCurveTo(cx - R * 0.5, ay, cx - R * 0.45, cy - R * 0.25); ctx.stroke();
+        ctx.strokeStyle = '#9b3f8f'; ctx.lineWidth = rE * 2 * s2; ctx.beginPath(); ctx.moveTo(cx, cy + R * 0.42); ctx.quadraticCurveTo(cx - R * 0.5, cy + R * 0.95, cx - R * 1.1, cy + R * 0.75); ctx.lineTo(ax, cy + R * 0.75); ctx.stroke();
+        text2(ctx, 'arteriola afferente', ax, ay - rA * s2 - 8, 'left', muted, 11); text2(ctx, 'arteriola efferente', ax, cy + R * 0.75 + rE * s2 + 16, 'left', muted, 11);
+        text2(ctx, 'capsula di Bowman', cx, cy - R - 8, 'center', muted, 11); text2(ctx, 'capillari glomerulari', cx, cy + R + 16, 'center', muted, 11);
+        // filtrato verso il tubulo, spessore ∝ GFR
+        var fw = Math.max(2, 10 * gl.GFR / 125 * s2); ctx.strokeStyle = 'rgba(230,180,60,0.9)'; ctx.lineWidth = fw; ctx.beginPath(); ctx.moveTo(cx + R, cy); ctx.lineTo(w * 0.7, cy); ctx.stroke();
+        U.arrow(ctx, w * 0.7 - 2, cy, w * 0.78, cy, 'rgba(230,180,60,0.95)', Math.max(2, fw * 0.5), 10);
+        text2(ctx, 'filtrato → tubulo prossimale', w * 0.7, cy - fw / 2 - 8, 'left', muted, 11); text2(ctx, 'GFR = ' + F.fmt(gl.GFR, 0) + ' mL/min', w * 0.7, cy + fw / 2 + 16, 'left', txt, 12, true);
+        // pressioni all'inizio e alla fine del capillare
+        var p0 = pr.PGC[0], pE = pr.PGC[n], pi0 = pr.pi[0], piE = pr.pi[n], tx = w * 0.7, ty = h * 0.12;
+        text2(ctx, 'inizio capillare:  P' + 'GC ' + F.fmt(p0, 0) + ' ↑   P' + 'BS ' + st.PBS + ' + π ' + F.fmt(pi0, 0) + ' ↓  →  netta ' + F.fmt(p0 - st.PBS - pi0, 0) + ' mmHg', 10, 16, 'left', css('--c1'), 11.5, true);
+        text2(ctx, 'fine capillare:       P' + 'GC ' + F.fmt(pE, 0) + ' ↑   P' + 'BS ' + st.PBS + ' + π ' + F.fmt(piE, 0) + ' ↓  →  netta ' + F.fmt(pE - st.PBS - piE, 0) + ' mmHg', 10, 34, 'left', css('--na'), 11.5, true);
+      });
+      function text2(ctx, str, x, y, align, col, size, bold) { ctx.font = (bold ? '600 ' : '') + size + 'px ' + U.css('--font'); ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(str, x, y); }
       var ro = U.readouts([{ key: 'gfr', label: 'GFR', hl: true }, { key: 'rpf', label: 'Flusso plasmatico renale' }, { key: 'ff', label: 'Frazione di filtrazione' }, { key: 'pgc', label: 'P<sub>GC</sub>' }]);
       L.main.appendChild(ro.el);
       var p1 = U.plot(L.main, { title: 'Pressioni lungo il capillare glomerulare', xlabel: 'posizione lungo il capillare (inizio → fine)', ylabel: 'mmHg', height: 240, xlim: [0, 1] });
@@ -44,6 +72,7 @@
       function run() {
         var g = glom(), pr = g.profile;
         p1.update({ series: [{ name: 'P idrostatica glomerulare', x: pr.x, y: pr.PGC, color: '--c1' }, { name: 'P Bowman + π oncotica', x: pr.x, y: pr.pi.map(function (p) { return p + st.PBS; }), color: '--na' }, { name: 'pressione netta di filtrazione', x: pr.x, y: pr.NFP, color: '--c3', fill: true }], ylim: [0, 80], hlines: [] });
+        gl = g; glCv.redraw();
         ro.set('gfr', F.fmt(g.GFR, 0) + ' mL/min'); ro.set('rpf', F.fmt(g.RPF, 0) + ' mL/min'); ro.set('ff', F.fmt(g.FF * 100, 1) + '%');
         ro.set('pgc', F.fmt(g.PGC, 1) + ' mmHg' + (g.equilibrium ? ' · equilibrio di filtrazione' : ''));
         var rs = F.linspace(0.5, 4, 36), gg = rs.map(function (r) { return glom({ Reff: r }); });
@@ -87,7 +116,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { p1.dispose(); p2.dispose(); } };
+      return { destroy: function () { glCv.dispose(); p1.dispose(); p2.dispose(); } };
     }
   });
 
