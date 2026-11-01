@@ -33,14 +33,17 @@
     sideList.innerHTML = '';
     var hash = location.hash;
     var ul = el('ul', { class: 'side-list' });
+    var provaLink = el('li', null, [el('a', { href: '#prova', class: hash === '#prova' ? 'active' : '' }, [el('span', { class: 'num', text: '✎' }), el('span', { text: 'Prova d\'esame' })])]);
     if (sideMode === 'L') {
       ul.appendChild(el('li', null, [el('a', { href: '#inizio', class: (hash === '' || hash === '#inizio') ? 'active' : '' }, [el('span', { class: 'num', text: '⌂' }), el('span', { text: 'Inizio' })])]));
+      ul.appendChild(provaLink);
       F.LESSONS.forEach(function (L) {
         var href = '#lezione-' + L.id;
         ul.appendChild(el('li', null, [el('a', { href: href, class: hash === href ? 'active' : '' }, [el('span', { class: 'num', text: lessonLabel(L) }), el('span', { text: L.title })])]));
       });
       sideList.appendChild(ul);
     } else {
+      var pu = el('ul', { class: 'side-list' }); pu.appendChild(provaLink); sideList.appendChild(pu);
       F.SECTIONS.forEach(function (S) {
         sideList.appendChild(el('div', { class: 'side-group', text: S.title }));
         var u = el('ul', { class: 'side-list' });
@@ -88,6 +91,10 @@
       el('h1', { text: 'Fisiologia Generale, da vedere e da provare' }),
       el('p', { html: 'Per ogni lezione del corso trovi il concetto chiave, le formule e uno o più <b>simulatori già impostati</b> sul punto da capire. Prima di toccare i cursori, fai la tua previsione: è il modo più rapido per capire davvero.' }),
       el('p', { class: 'small', html: 'I modelli sono equazioni della fisiologia (Nernst, Goldman, Hodgkin-Huxley, Fick, van\'t Hoff, Starling…) calcolate in tempo reale e verificate con test automatici sui valori di letteratura e delle slide. Dove una slide contiene un errore, la lezione lo segnala nel riquadro <b>Attenzione</b>.' })
+    ]));
+    c.appendChild(el('a', { class: 'card promo', href: '#prova' }, [
+      el('div', { class: 'kicker', text: 'Verifica' }), el('h3', { text: 'Prova d\'esame: intercorsi a crocette' }),
+      el('p', { text: 'Simulazioni a tempo del primo e del secondo intercorso, e prove costruite sui tuoi errori. Con storico dei tentativi.' })
     ]));
     c.appendChild(el('h2', { class: 'section-title', text: 'Le lezioni' }));
     var g = el('div', { class: 'card-grid' });
@@ -186,13 +193,15 @@
     document.body.classList.remove('nav-open');
     // indirizzi semplici (#lezione-13, #sim-ghk, #inizio): funzionano anche dentro la pagina pubblicata
     var h = location.hash.replace(/^#/, ''), page, m;
-    if ((m = /^lezione-(.+)$/.exec(h))) { page = pageLesson(m[1]); sideMode = 'L'; }
+    var qp = null;
+    if (h === 'prova' && F.quizPage) { qp = F.quizPage(); page = qp.el; mounted.push(qp); sideMode = 'L'; }
+    else if ((m = /^lezione-(.+)$/.exec(h))) { page = pageLesson(m[1]); sideMode = 'L'; }
     else if ((m = /^sim-(.+)$/.exec(h))) { page = pageSim(m[1]); sideMode = 'A'; }
     else page = pageHome();
     content.innerHTML = '';
     content.appendChild(page);
     var t = page.querySelector('h1');
-    document.title = (t && m ? t.textContent + ' · ' : '') + 'Simulatore di Fisiologia';
+    document.title = (t && (m || qp) ? t.textContent + ' · ' : '') + 'Simulatore di Fisiologia';
     G.scrollTo(0, 0);
     renderSide();
   }
