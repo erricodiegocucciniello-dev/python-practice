@@ -58,6 +58,33 @@
       upd();
       var loop = U.loop(anim, function (dt) { phase = (phase + dt * (0.15 + rate * 1.2)) % 1; cv.redraw(); });
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var crBase = function () { tSel.set('glut1'); sF.set(10); sC.set(5); sI.set(0); sT.set(37); };
+      U.explainer(L, {
+        watch: ro,
+        base: crBase,
+        legend: [['--c4', 'curva viola: trasporto mediato (satura)'], ['--faint', 'tratteggio grigio: diffusione semplice (lineare)']],
+        narrate: function () {
+          var f = F.fmt, Kapp = st.Km * (1 + st.I), sat = st.C / (Kapp + st.C), q = F.q10factor(2.5, st.T, 37), fl = q * F.michaelis(st.C, st.Fmax, st.Km, st.I, 1);
+          var s = `Il trasportatore lega il glucosio sul lato esterno, cambia conformazione e lo rilascia dentro, poi torna indietro (modello «ping-pong»). Ce ne sono un numero finito (F<sub>max</sub> = ${f(st.Fmax, 1)}): con il glucosio a ${f(st.C, 1)} mM è occupato il <b>${f(sat * 100, 0)}%</b> dei siti e il flusso vale ${f(fl, 1)}. `;
+          if (st.C < 0.3 * Kapp) s += `A concentrazioni molto minori di K<sub>m</sub> quasi tutti i siti sono liberi e il flusso cresce <i>quasi linearmente</i>, come nella diffusione semplice (linea tratteggiata).`;
+          else if (st.C > 4 * Kapp) s += `A concentrazioni molto maggiori di K<sub>m</sub> quasi tutti i trasportatori sono occupati: il flusso è <b>saturo</b>, vicino a F<sub>max</sub>. Aumentare ancora il glucosio non serve, mentre la diffusione semplice continuerebbe a crescere.`;
+          else s += `Siamo nella zona intermedia: il flusso cresce meno che proporzionalmente. A C = K<sub>m</sub> (${f(Kapp, 1)} mM) sarebbe esattamente metà del massimo.`;
+          if (st.I > 0.05) s += ` L'inibitore competitivo occupa lo stesso sito: il K<sub>m</sub> apparente sale a ${f(Kapp, 1)} mM, ma a concentrazioni alte si arriva ancora a F<sub>max</sub>.`;
+          if (Math.abs(st.T - 37) > 1) s += ` A ${f(st.T, 0)} °C il trasporto mediato è ${q < 1 ? 'più lento' : 'più veloce'} (Q<sub>10</sub> ≈ 2,5): molto più sensibile alla temperatura della diffusione semplice.`;
+          return s;
+        },
+        experiments: [
+          { label: 'Poco glucosio (1 mM)', run: function () { crBase(); sC.set(1); }, why: `A bassa concentrazione i siti sono quasi tutti liberi: il flusso cresce quasi in proporzione alla concentrazione, come in una diffusione semplice.` },
+          { label: 'Saturazione (40 mM)', run: function () { crBase(); sC.set(40); }, why: `Quasi tutti i trasportatori sono occupati: il flusso è vicino a F<sub>max</sub> e non cresce più, mentre la diffusione semplice (tratteggio) continua a salire.` },
+          { label: 'Inibitore competitivo', run: function () { crBase(); sI.set(3); }, why: `L'inibitore occupa lo stesso sito: serve più glucosio per ottenere lo stesso flusso (K<sub>m</sub> apparente 4 volte più alto), ma F<sub>max</sub> non cambia.` },
+          { label: 'Raffreddamento (27 °C)', run: function () { crBase(); sT.set(27); }, why: `Il trasporto mediato è molto sensibile alla temperatura (Q<sub>10</sub> ≈ 2,5): a 10 °C in meno il flusso si riduce a meno della metà. È un indizio che c'è un legame chimico col trasportatore.` },
+          { label: 'GLUT2 (K<sub>m</sub> alto)', run: function () { crBase(); tSel.set('glut2'); }, why: `GLUT2 ha un K<sub>m</sub> alto (≈17 mM): lavora lontano dalla saturazione e segue la glicemia, adatto a fegato e cellule β.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { loop.stop(); plot.dispose(); cv.dispose(); } };
     }
   });
@@ -158,6 +185,26 @@
       var loop = null;
       if (scn) scn.onFrame(place); else loop = U.loop(L.main, place);
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var pBase = function () { pSel.set('nak'); sNa.set(12); sKo.set(4.5); sV.set(-70); sLum.set(1); tO.set(false); };
+      U.explainer(L, {
+        poll: 700,
+        narrate: function () {
+          var sn = ro.snapshot();
+          return { kind: /impossibile/.test(sn[2].value) ? 'bad' : '', html: `L'animazione mostra il ciclo (E1 ↔ E2): legame degli ioni, fosforilazione, cambio di conformazione, rilascio. Qui sotto c'è il <b>bilancio energetico</b>: per un ciclo di ${sn[3].value} servono <b>${sn[0].value}</b>, mentre l'idrolisi di un ATP nella cellula ne fornisce ${sn[1].value}. Esito: <b>${sn[2].value}</b>. Una pompa può lavorare solo se l'energia richiesta per ciclo è minore di quella dell'ATP: per questo le pompe sono «limitate dal gradiente» e non possono creare gradienti illimitati.` };
+        },
+        experiments: [
+          { label: 'Cellula normale', run: function () { pBase(); }, why: `Per estrarre 3 Na⁺ e far entrare 2 K⁺ servono circa 44 kJ/mol: un ATP ne fornisce circa 52, quindi la pompa lavora con un buon rendimento.` },
+          { label: 'Na⁺ interno alto (40 mM)', run: function () { pBase(); sNa.set(40); }, why: `Con più Na⁺ dentro il gradiente è minore, quindi serve meno energia per estrarlo. Il Na⁺ interno è anche il principale regolatore della pompa: se sale, la pompa accelera.` },
+          { label: 'K⁺ esterno alto (15 mM)', run: function () { pBase(); sKo.set(15); }, why: `Con più K⁺ fuori è più facile farlo entrare (gradiente minore): il costo energetico cala un po'.` },
+          { label: 'Gastrica, 1 H⁺ per ATP', run: function () { pBase(); pSel.set('hk1'); sLum.set(1); }, why: `Per portare un H⁺ da pH 7,2 a pH 1 servono circa 37 kJ/mol: un ATP basta.` },
+          { label: 'Gastrica, 2 H⁺ per ATP', run: function () { pBase(); pSel.set('hk2'); sLum.set(1); }, why: `Con 2 H⁺ per ATP servirebbero circa 74 kJ/mol, più di quanto fornisca un ATP: la pompa non potrebbe lavorare. Per questo la pompa gastrica trasporta un solo H⁺ per ciclo.` },
+          { label: 'Ouabaina', run: function () { pBase(); tO.set(true); }, why: `L'ouabaina si lega alla pompa nella forma E2P, dal lato esterno, e la blocca. Il ciclo si ferma al passo 4, e col tempo i gradienti di Na⁺ e K⁺ si dissipano.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
@@ -217,6 +264,27 @@
       }
       run();
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var sgBase = function () { sG.set(2); tO.set(false); tP.set(false); tF.set(false); };
+      U.explainer(L, {
+        legend: [['--c4', 'SGLT1: glucosio + 2 Na⁺ (trasporto attivo secondario)'], ['--c3', 'GLUT2: diffusione facilitata verso il sangue'], ['--na', 'pompa Na⁺/K⁺ (trasporto attivo primario)']],
+        narrate: function () {
+          var f = F.fmt, n = res.t.length - 1, Gi = res.Gi[n], NaI = res.NaI[n], Jg = Math.max(0, res.Jglut[n]);
+          if (st.phlor) return { kind: 'bad', html: `La <b>florizina</b> blocca SGLT1: il glucosio non può entrare dal lume (nella cellula resta ${f(Gi, 1)} mM) e l'assorbimento verso il sangue si ferma (${f(Jg, 2)} mM/s).` };
+          if (st.phlo) return { kind: 'warn', html: `La <b>floretina</b> blocca GLUT2: il glucosio entra con SGLT1 ma non può uscire verso il sangue, quindi si accumula nella cellula (${f(Gi, 1)} mM). L'assorbimento verso il sangue è ${f(Jg, 2)} mM/s.` };
+          if (st.ouab) return { kind: 'bad', html: `Con l'<b>ouabaina</b> la pompa si ferma dal minuto 3: il Na⁺ interno sale (ora ${f(NaI, 0)} mM), il gradiente di Na⁺ si dissipa e la membrana si depolarizza, quindi SGLT1 perde la sua forza motrice e l'assorbimento cala (${f(Jg, 2)} mM/s). L'ouabaina non tocca il glucosio: ne dipende solo perché dipende dalla pompa. È il <b>trasporto attivo secondario</b>.` };
+          return { kind: 'ok', html: `Il glucosio entra dal lume nell'enterocita con <b>SGLT1</b>, insieme a 2 Na⁺: lo spinge il gradiente del Na⁺ (145 mM fuori, ${f(NaI, 0)} mM dentro), mantenuto dalla pompa Na⁺/K⁺ sul lato basolaterale. Il glucosio si accumula nella cellula (${f(Gi, 1)} mM) ${Gi > st.Gl ? `<b>più che nel lume</b> (${f(st.Gl, 1)} mM): contro gradiente` : 'senza superare il lume'}. Poi esce verso il sangue con GLUT2, secondo gradiente (${f(Jg, 2)} mM/s).` };
+        },
+        experiments: [
+          { label: 'Normale (2 mM nel lume)', run: function () { sgBase(); }, why: `Il glucosio si accumula nella cellula a una concentrazione maggiore di quella del lume: è possibile solo perché lo accoppiamo al gradiente del Na⁺.` },
+          { label: 'Ouabaina', run: function () { sgBase(); tO.set(true); }, why: `Bloccando la pompa il gradiente del Na⁺ si dissolve e l'assorbimento del glucosio crolla: il glucosio non è toccato dal farmaco, ma dipende dalla pompa in modo indiretto.` },
+          { label: 'Florizina', run: function () { sgBase(); tP.set(true); }, why: `Senza SGLT1 il glucosio non entra: l'assorbimento intestinale si ferma.` },
+          { label: 'Floretina', run: function () { sgBase(); tF.set(true); }, why: `Senza GLUT2 il glucosio entra ma non esce: si accumula nell'enterocita invece di arrivare al sangue.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { p1.dispose(); cv.dispose(); } };
     }
   });

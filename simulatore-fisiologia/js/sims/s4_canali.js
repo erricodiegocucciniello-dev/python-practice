@@ -237,6 +237,58 @@
       build();
       var loop = null;
       if (scn) scn.onFrame(frame); else loop = U.loop(L.main, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        poll: 300,
+        narrate: function () {
+          var f = F.fmt, t = st.type, V = st.V, EK = F.nernst(5, 140, 1, 37), s;
+          if (t === 'nav') {
+            var m = gate.m, h = gate.h;
+            s = `Canale Na<sup>+</sup> voltaggio-dipendente a ${f(V, 0)} mV. I 4 cilindri arancioni sono i sensori <b>S4</b> (con cariche positive), le barrette scure le porte di attivazione (S6), la sfera gialla la <b>porta di inattivazione</b>. `;
+            if (gate.open > 0.1) s += `<b>Canale aperto</b>: la depolarizzazione ha spinto i sensori S4 verso l'esterno e aperto la porta di attivazione; il Na⁺ entra (pallini arancioni) seguendo la forza elettrochimica.`;
+            else if (m > 0.4 && h < 0.4) s += `<b>Canale inattivato</b>: i sensori S4 sono ancora «su», ma la sfera gialla ha chiuso il poro dall'interno. Non si riapre finché la membrana non torna a riposo e la porta h non recupera: è la base del periodo refrattario.`;
+            else if (m < 0.15) s += `<b>Canale chiuso a riposo</b>: i sensori S4 sono in basso (attratti dall'interno negativo) e le porte di attivazione sono chiuse. Nessuno ione passa, ma il canale è pronto a rispondere${h > 0.5 ? ' (la porta di inattivazione è aperta)' : ''}.`;
+            else s += `Il canale sta cambiando stato: S4 sale e le porte di attivazione si aprono (m = ${f(m, 2)}), mentre la porta di inattivazione comincia a chiudersi (h = ${f(h, 2)}).`;
+            if (st.lido && gate.B > 0.05) s += ` <b>Lidocaina</b>: il ${f(gate.B * 100, 0)}% dei canali è bloccato. Il farmaco entra dall'interno quando il canale è aperto o inattivato e vi resta intrappolato: il blocco è <i>uso-dipendente</i>.`;
+            return s;
+          }
+          if (t === 'kv') {
+            var n4 = Math.pow(gate.n, 4), ballOn = st.ball && (gate.ball || 0) > 0.5;
+            s = `Canale K<sup>+</sup> voltaggio-dipendente a ${f(V, 0)} mV: 4 subunità, ciascuna con un sensore S4. `;
+            if (ballOn) s += `<b>Inattivato</b>: la «palla» (l'estremità N-terminale, sfera gialla) ha raggiunto l'imboccatura del poro e lo chiude. La palla entra solo se il canale si è prima aperto.`;
+            else if (gate.open > 0.1) s += `<b>Aperto</b>: i sensori S4 si sono spostati e la porta si è aperta; il K⁺ esce secondo gradiente e ripolarizza la membrana.`;
+            else if (n4 < 0.05) s += `<b>Chiuso</b>: a questo potenziale i sensori sono in basso. Il canale Kv si attiva più lentamente del Nav, per questo ripolarizza con ritardo.`;
+            else s += `Si sta aprendo (n⁴ = ${f(n4, 2)}).`;
+            return s;
+          }
+          if (t === 'k2p') return `Canale di fuga K2P: è <b>sempre aperto</b>, senza porta né sensore del voltaggio. La corrente dipende solo dalla forza elettrochimica V − E<sub>K</sub> = ${f(V - EK, 0)} mV, ed è ${V > EK ? 'uscente' : 'entrante'}. Insieme ai canali Kir, i canali di fuga K⁺ sono la causa principale del potenziale di riposo vicino a E<sub>K</sub>.`;
+          if (t === 'kir') return `Canale Kir: non ha il sensore S4. La rettificazione nasce da un <b>blocco del poro</b> dal lato interno da parte di Mg²⁺ e poliammine (sfera verde-azzurra), che entrano quando la membrana è più positiva di E<sub>K</sub> = ${f(EK, 0)} mV. Ora la frazione bloccata è ${f(gate.block * 100, 0)}%: il canale lascia passare bene la corrente <i>entrante</i> e poco quella uscente.`;
+          if (t === 'nachr') {
+            s = `Recettore nicotinico (pentamero α₂βεδ): il poro è formato dalle 5 subunità e si apre solo quando <b>due molecole di ACh</b> occupano i due siti di legame, sulle subunità α. `;
+            if (st.lig && st.curare) s += `Il <b>curaro</b> occupa i siti senza aprire il canale e impedisce il legame dell'ACh: nessuna corrente, nessun potenziale di placca, il muscolo non si contrae (paralisi).`;
+            else if (st.lig) s += `ACh legata: la subunità M2 ruota e il poro si apre. Passano Na⁺ (dentro) e K⁺ (fuori) senza distinguerli, con un <b>ingresso netto di cariche positive</b>: è la depolarizzazione della placca (PPSE).`;
+            else s += `Nessuna ACh: i siti sono vuoti e il canale è chiuso. Attiva «Acetilcolina presente».`;
+            return s;
+          }
+          s = `Acquaporina-1: un tetramero, ogni subunità ha il suo poro stretto in cui l'acqua passa in fila singola. `;
+          if (st.hg) return s + `L'<b>Hg²⁺</b> si lega a una cisteina vicino al poro e lo blocca: quasi nessun flusso.`;
+          if (Math.abs(st.dGrad) < 0.05) return s + `Senza gradiente osmotico l'acqua si muove in entrambi i sensi ma non c'è flusso netto.`;
+          return s + `Il gradiente osmotico (${st.dGrad > 0 ? 'più soluto dentro' : 'più soluto fuori'}) fa passare l'acqua verso ${st.dGrad > 0 ? "l'interno" : "l'esterno"}: ogni poro lascia passare circa 3·10⁹ molecole al secondo. Le acquaporine non trasportano ioni e non consumano ATP.`;
+        },
+        experiments: [
+          { label: 'Na⁺ a riposo (−65 mV)', run: function () { tSel.set('nav'); sV.set(-65); }, why: `A riposo il canale è chiuso ma pronto: S4 è in basso e la porta di inattivazione è aperta.` },
+          { label: 'Na⁺ a −10 mV', run: function () { tSel.set('nav'); sV.set(-10); }, why: `Guarda in sequenza (l'animazione è rallentata 300 volte): prima S4 sale e il canale si <b>apre</b> (Na⁺ entra), poi la sfera gialla lo <b>inattiva</b>. Il grafico mostra P(aperto) = m³h che sale e poi ricade: l'attivazione è veloce, l'inattivazione più lenta.` },
+          { label: `Potenziale d'azione`, run: function () { tSel.set('nav'); runAP(); }, why: `Durante un potenziale d'azione il canale si apre per meno di 1 ms e poi si inattiva: poi ci vuole tempo e una ripolarizzazione perché torni utilizzabile.` },
+          { label: 'Lidocaina: treno di 10 PdA', run: function () { tSel.set('nav'); st.lido = true; build(); runTrain(); }, why: `L'anestetico locale entra dall'interno solo quando il canale è aperto o inattivato: a ogni impulso ne blocca di più (<b>blocco uso-dipendente</b>). Per questo agisce soprattutto sulle fibre che scaricano molto, come quelle del dolore.` },
+          { label: 'K⁺ a −10 mV', run: function () { tSel.set('kv'); sV.set(-10); }, why: `Il canale Kv si apre più lentamente del Nav e non si inattiva (se la «palla» è disattivata): per questo ripolarizza la membrana dopo il picco.` },
+          { label: 'Nicotinico + ACh', run: function () { tSel.set('nachr'); st.lig = true; st.curare = false; build(); }, why: `Con due ACh legate il canale si apre: passano Na⁺ e K⁺ e la placca si depolarizza.` },
+          { label: 'Nicotinico + curaro', run: function () { tSel.set('nachr'); st.lig = true; st.curare = true; build(); }, why: `Il curaro compete con l'ACh per i siti: il canale resta chiuso anche se l'ACh è presente.` },
+          { label: 'Acquaporina', run: function () { tSel.set('aqp'); }, why: `L'acqua attraversa i quattro pori in fila singola, secondo il gradiente osmotico.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
@@ -271,6 +323,34 @@
         plot.update({ series: [{ x: Vs, y: I, color: '--c1' }], vlines: [{ x: E, label: 'E = ' + F.fmt(E, 0) + ' mV', color: '--ok' }], hlines: [] });
       }
       upd();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        narrate: function () {
+          var f = F.fmt, EK = F.nernst(st.Ko, 140, 1, 37);
+          var T = {
+            ohm: `Canale ideale: la corrente è proporzionale alla forza elettrochimica, I = g·(V − E). Si annulla a V = E = ${f(EK, 0)} mV (<b>potenziale di inversione</b>): a destra di E la corrente è uscente, a sinistra entrante. È la legge di Ohm generalizzata.`,
+            ghk: `Con concentrazioni diverse ai due lati la relazione I–V non è lineare anche se il canale non ha altre proprietà: a parità di V − E passano più ioni dal lato più concentrato (rettificazione di Goldman). Qui il K⁺ è più concentrato dentro (140 mM) che fuori (${f(st.Ko, 1)} mM), quindi la corrente uscente è favorita. Con K⁺ esterno = 140 mM la curva diventa una retta.`,
+            kv: `Rettificatore ritardato: il canale è chiuso a potenziali negativi e si apre con la depolarizzazione (sopra circa −50 mV). La corrente è quasi nulla a sinistra e cresce a destra, solo <b>uscente</b>. Teoricamente si annulla a E<sub>K</sub> = ${f(EK, 0)} mV, ma lì il canale è chiuso.`,
+            kir: `Rettificatore entrante: lascia passare bene la corrente <b>entrante</b> (V &lt; E<sub>K</sub>) e poco quella uscente. La causa è il blocco del poro da parte di Mg²⁺ e poliammine che entrano quando V &gt; E<sub>K</sub>; il blocco dipende da V − E<sub>K</sub>, perciò la curva si sposta insieme a E<sub>K</sub> (ora ${f(EK, 0)} mV): prova ad alzare il K⁺ esterno.`,
+            nmda: st.Mg > 0 ? `Il recettore NMDA ha una particolarità: il Mg²⁺ extracellulare (${f(st.Mg, 1)} mM) occlude il poro a potenziali negativi. La corrente è piccola a −60 mV anche con glutammato legato, e aumenta con la depolarizzazione perché il Mg²⁺ viene espulso (tratto a pendenza negativa). Conduce solo con glutammato <b>e</b> membrana depolarizzata: è un rivelatore di coincidenza. E<sub>rev</sub> ≈ 0 mV.` : `Senza Mg²⁺ il blocco scompare e la curva diventa lineare, con inversione a 0 mV: il canale conduce a qualsiasi potenziale purché ci sia glutammato.`,
+            ach: `Recettore nicotinico: canale cationico non selettivo (passano Na⁺ e K⁺), quindi la corrente si annulla vicino a 0 mV, a metà strada tra E<sub>K</sub> e E<sub>Na</sub>. Sotto 0 mV la corrente è entrante (depolarizza la placca), sopra è uscente.`
+          };
+          return T[st.type];
+        },
+        experiments: [
+          { label: 'Ohmico', run: function () { tSel.set('ohm'); }, why: `La corrente è una retta che passa per E: la relazione più semplice.` },
+          { label: 'K⁺ con gradiente (GHK)', run: function () { tSel.set('ghk'); sK.set(5); }, why: `La curva è piegata anche senza canali complicati: è l'effetto delle concentrazioni diverse sui due lati.` },
+          { label: 'Kv (rettificatore ritardato)', run: function () { tSel.set('kv'); sK.set(5); }, why: `Il canale si apre solo con la depolarizzazione: corrente solo uscente.` },
+          { label: 'Kir (rettificatore entrante)', run: function () { tSel.set('kir'); sK.set(5); }, why: `Corrente entrante abbondante, uscente quasi bloccata: è il contrario del Kv.` },
+          { label: 'Kir con K⁺ esterno 20 mM', run: function () { tSel.set('kir'); sK.set(20); }, why: function () { return `E<sub>K</sub> sale da −89 a ${F.fmt(F.nernst(20, 140, 1, 37), 0)} mV e l'intera curva si sposta con lui: il blocco dipende da V − E<sub>K</sub>.`; } },
+          { label: 'NMDA', run: function () { tSel.set('nmda'); sMg.set(1); }, why: `Il Mg²⁺ blocca a potenziali negativi: tratto a pendenza negativa.` },
+          { label: 'NMDA senza Mg²⁺', run: function () { tSel.set('nmda'); sMg.set(0); }, why: `Senza Mg²⁺ il canale conduce a tutti i potenziali: la curva è una retta.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); } };
     }
   });
@@ -309,7 +389,7 @@
       var plot = U.plot(L.main, { title: 'Secrezione in funzione del glucosio', xlabel: 'glucosio (mmol/L)', ylabel: 'secrezione (rel.)', height: 190, xlim: [0, 20], ylim: [0, 1.05] });
       function upd() {
         res = F.betaCell(st.G, st.su, st.dz);
-        ro.set('k', F.fmt(res.closed * 100, 0) + '%'); ro.set('v', F.fmt(res.Vm, 1) + ' mV'); ro.set('c', F.fmt(res.caOpen * 100, 0) + '%'); ro.set('s', F.fmt(res.secretion * 100, 0) + '% del massimo');
+        ro.set('k', F.fmt(Math.max(0, 1 - res.gKATP / 5) * 100, 0) + '%'); // quota di K-ATP chiusi, considerando anche i farmaci ro.set('v', F.fmt(res.Vm, 1) + ' mV'); ro.set('c', F.fmt(res.caOpen * 100, 0) + '%'); ro.set('s', F.fmt(res.secretion * 100, 0) + '% del massimo');
         var Gs = F.linspace(0, 20, 81);
         plot.update({ series: [{ name: 'controllo', x: Gs, y: Gs.map(function (g) { return F.betaCell(g, 0, 0).secretion; }), color: '--faint', dash: [5, 4] },
           { name: 'condizione attuale', x: Gs, y: Gs.map(function (g) { return F.betaCell(g, st.su, st.dz).secretion; }), color: '--c1' },
@@ -317,6 +397,28 @@
         cv.redraw();
       }
       upd();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { sG.set(5); tSU.set(false); tDZ.set(false); },
+        narrate: function () {
+          var f = F.fmt, r = F.betaCell(st.G, st.su, st.dz);
+          var s = `Con glicemia ${f(st.G, 1)} mmol/L: il glucosio entra nella cellula β e viene metabolizzato, il rapporto ATP/ADP sale e i canali <b>K-ATP</b> si chiudono (${f(Math.max(0, 1 - r.gKATP / 5) * 100, 0)}% chiusi). Esce meno K⁺, quindi la membrana si <b>depolarizza</b> (${f(r.Vm, 1)} mV). `;
+          s += r.caOpen > 0.1 ? `Si aprono i canali Ca²⁺ voltaggio-dipendenti (${f(r.caOpen * 100, 0)}%): entra Ca²⁺ e le vescicole di insulina si fondono con la membrana (secrezione ${f(r.secretion * 100, 0)}% del massimo). ` : `La depolarizzazione non basta ad aprire i canali Ca²⁺ (la soglia è vicino a −50 mV): niente Ca²⁺, niente secrezione (${f(r.secretion * 100, 0)}%). `;
+          if (st.su) s += `La <b>sulfonilurea</b> chiude i K-ATP anche senza glucosio: la cellula si depolarizza e secerne insulina anche a glicemia bassa (da qui il rischio di ipoglicemia). `;
+          if (st.dz) s += `Il <b>diazossido</b> tiene aperti i K-ATP: la membrana resta iperpolarizzata e non c'è secrezione neppure a glicemia alta (si usa nell'iperinsulinismo).`;
+          return { kind: r.secretion > 0.3 ? 'ok' : '', html: s };
+        },
+        experiments: [
+          { label: 'Digiuno (3 mmol/L)', run: function () { sG.set(3); tSU.set(false); tDZ.set(false); }, why: `Con poco glucosio i K-ATP restano aperti, la cellula è iperpolarizzata e non secerne insulina.` },
+          { label: 'Dopo un pasto (12 mmol/L)', run: function () { sG.set(12); tSU.set(false); tDZ.set(false); }, why: `Più glucosio → più ATP → K-ATP chiusi → depolarizzazione → Ca²⁺ → insulina. La secrezione è sigmoide: parte solo oltre una soglia di glicemia.` },
+          { label: 'Sulfonilurea a glicemia normale', run: function () { sG.set(5); tSU.set(true); tDZ.set(false); }, why: `Il farmaco chiude i K-ATP con la glicemia normale: la cellula secerne insulina «a vuoto». È il meccanismo di molti antidiabetici orali, ma c'è il rischio di ipoglicemia.` },
+          { label: 'Diazossido a glicemia alta', run: function () { sG.set(12); tSU.set(false); tDZ.set(true); }, why: `Il diazossido apre i K-ATP: anche con molto glucosio la cellula non si depolarizza e la secrezione si ferma.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); cv.dispose(); } };
     }
   });

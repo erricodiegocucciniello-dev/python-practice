@@ -2,7 +2,8 @@
    Esecuzione:  node tests/browser.test.js [cartella-screenshot]
    Apre ogni lezione e ogni simulatore, fa scorrere la pagina per caricare tutti i simulatori
    e verifica: nessun errore JavaScript, nessun "NaN"/"undefined" nel testo visibile,
-   ogni simulatore montato senza errori, grafici non vuoti, domande "Prevedi" funzionanti. */
+   ogni simulatore montato senza errori, grafici non vuoti, domande "Prevedi" funzionanti,
+   riquadro «Cosa sta succedendo» presente e tutte le prove interattive eseguibili senza errori. */
 'use strict';
 const path = require('path');
 const fs = require('fs');
@@ -38,8 +39,8 @@ if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
     errors = [];
     await page.goto(url + '#' + r);
     await page.waitForTimeout(250);
-    const h = await page.evaluate(() => document.body.scrollHeight);
-    for (let y = 0; y < h + 1000; y += 500) { await page.evaluate(yy => window.scrollTo(0, yy), y); await page.waitForTimeout(90); }
+    // i simulatori si montano quando entrano nella finestra e la pagina si allunga: si ricalcola l'altezza a ogni passo
+    for (let y = 0; y < (await page.evaluate(() => document.body.scrollHeight)) + 800; y += 500) { await page.evaluate(yy => window.scrollTo(0, yy), y); await page.waitForTimeout(110); }
     await page.waitForTimeout(700);
     const res = await page.evaluate(() => {
       const txt = document.getElementById('content').innerText;
@@ -63,11 +64,32 @@ if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
     // prova la prima domanda "Prevedi" (se c'è)
     const pred = await page.$('.predict .choice');
     if (pred) { await pred.click(); const fb = await page.$eval('.predict .feedback', e => e.textContent.length); if (!fb) res.bad.push('feedback della domanda vuoto'); }
+    // riquadro «Cosa sta succedendo» e prove interattive (solo nelle pagine dei simulatori)
+    if (r.indexOf('sim-') === 0) {
+      if (!(await page.$('.explain'))) res.bad.push('manca il riquadro di spiegazione');
+      else {
+        const liveOk = await page.$eval('.explain', e => { const l = e.querySelector('.ex-live'); return !l || l.textContent.trim().length > 40; });
+        if (!liveOk) res.bad.push('testo «Cosa sta succedendo» vuoto');
+        const n = await page.$$eval('.ex-btn', b => b.length);
+        if (n < 2) res.bad.push('meno di 2 prove interattive');
+        for (let i = 0; i < n; i++) {
+          const btn = (await page.$$('.ex-btn'))[i], label = (await btn.innerText()).trim();
+          await btn.click(); await page.waitForTimeout(350);
+          const out = await page.$eval('.explain', e => {
+            const rr = e.querySelector('.ex-result'), t = e.innerText;
+            return { shown: !!rr && !rr.hidden && rr.innerText.trim().length > 10, bad: /\bNaN\b|\bundefined\b|Infinity/.test(t) };
+          });
+          if (!out.shown) res.bad.push('prova «' + label + '» senza risultato');
+          if (out.bad) res.bad.push('prova «' + label + '»: NaN/undefined nel testo');
+        }
+        res.explain = n;
+      }
+    }
     const realErr = errors.filter(e => !/GPU stall|GL Driver|WebGL/i.test(e));
     if (realErr.length) res.bad.push('errori JS: ' + realErr.slice(0, 3).join(' | '));
     if (res.blank) res.bad.push(res.blank + '/' + res.total + ' grafici vuoti');
     const ok = res.bad.length === 0;
-    console.log(`${ok ? 'OK ' : 'ERR'} ${r || '(home)'} — simulatori: ${res.sims}, grafici: ${res.total}, 3D: ${res.webgl}${ok ? '' : ' — ' + res.bad.join('; ')}`);
+    console.log(`${ok ? 'OK ' : 'ERR'} ${r || '(home)'} — simulatori: ${res.sims}, grafici: ${res.total}, 3D: ${res.webgl}${res.explain ? ', prove: ' + res.explain : ''}${ok ? '' : ' — ' + res.bad.join('; ')}`);
     if (!ok) failures.push(r + ': ' + res.bad.join('; '));
     if (shotDir) await page.screenshot({ path: path.join(shotDir, name + '.png'), fullPage: true });
   }

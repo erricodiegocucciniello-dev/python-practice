@@ -294,3 +294,29 @@ main { padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left, 0px))
   .scrim { inset: calc(56px + env(safe-area-inset-top, 0px)) 0 0 0; }
   main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 }
+
+/* ---------- spiegazioni guidate ---------- */
+.explain { background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.explain.ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.explain.bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); }
+.explain.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--border)); }
+.ex-title { font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--accent); }
+.explain.ok .ex-title { color: var(--ok); } .explain.bad .ex-title { color: var(--bad); } .explain.warn .ex-title { color: var(--warn); }
+.ex-live { font-size: .97rem; line-height: 1.6; max-width: 78ch; }
+.ex-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .82rem; color: var(--muted); }
+.ex-lg { display: inline-flex; align-items: center; gap: 6px; }
+.ex-sw { display: inline-block; width: 16px; height: 4px; border-radius: 2px; flex: none; }
+.ex-try { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ex-try .lbl { font-size: .82rem; font-weight: 700; color: var(--muted); margin-right: 2px; }
+.ex-btn { border: 1px solid var(--border); background: var(--surface); border-radius: 99px; padding: 4px 11px; font-size: .84rem; cursor: pointer; color: var(--text); }
+.ex-btn:hover { border-color: var(--accent); }
+.ex-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.ex-result { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: .93rem; }
+.ex-rt { font-weight: 650; margin-bottom: 4px; }
+.ex-scroll { overflow-x: auto; margin: 4px 0 6px; }
+.ex-diff { border-collapse: collapse; width: 100%; font-size: .86rem; }
+.ex-diff th { text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); padding: 3px 8px 3px 0; }
+.ex-diff td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.ex-diff td.n { font-variant-numeric: tabular-nums; }
+.ex-diff td.new { font-weight: 650; color: var(--accent); }
+.ex-why { line-height: 1.55; }

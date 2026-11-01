@@ -83,6 +83,43 @@
         cv.redraw();
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var fbBase = function () { typeSel.set('neg'); sK.set(9); sD.set(-2); sDel.set(0); tFF.set(false); tAd.set(false); };
+      U.explainer(L, {
+        watch: ro,
+        base: fbBase,
+        legend: [['--c1', 'linea blu: la variabile controllata (temperatura)'], ['--ok', 'tratteggio verde: valore ideale, 37 °C']],
+        narrate: function () {
+          var f = F.fmt, d = st.d, K = st.K;
+          var dtxt = (d > 0 ? 'alza' : 'abbassa') + ' la temperatura di ' + f(Math.abs(d), 1) + ' °C';
+          if (Math.abs(d) < 0.05) return 'Nessun disturbo: la temperatura resta a 37 °C. Sposta il cursore «Disturbo» (per esempio un ambiente freddo) e guarda come risponde il sistema.';
+          if (st.type === 'open') return { kind: 'bad', html: `Qui <b>non c'è retroazione</b>: dal minuto 10 il disturbo ${dtxt} e <b>nessuno lo corregge</b>. Il sistema controllato subisce semplicemente l'ambiente. Scegli «Negativa» per vedere cosa cambia.` };
+          if (st.type === 'pos') {
+            if (K >= 1) return { kind: 'bad', html: `<b>Retroazione positiva</b>: l'effettore spinge nello <i>stesso</i> verso dell'errore. Il disturbo ${dtxt}; la correzione la sposta ancora di più, e così via: l'errore si autoamplifica e la variabile <b>sfugge</b> senza tornare indietro (sistema instabile). In fisiologia serve solo per processi «tutto o nulla» che poi si fermano da soli, come il potenziale d'azione.` };
+            return `Retroazione positiva con guadagno basso (K = ${f(K, 1)} &lt; 1): il sistema resta stabile ma <b>amplifica</b> il disturbo. L'errore finale è d/(1−K) = ${f(d / (1 - K), 2)} °C, più grande del disturbo stesso (${f(d, 1)} °C).`;
+          }
+          var r = F.feedbackLoop({ K: K, tau: 5, set: 37, type: 'neg', delay: st.delay, adaptTau: st.adapt ? 15 : 0, feedforward: st.ff ? 1 : 0, tmax: 80, disturbance: function (t) { return t >= 10 ? d : 0; } });
+          var n = r.y.length, tail = r.y.slice(Math.floor(n * 0.75)), amp = Math.max.apply(null, tail) - Math.min.apply(null, tail), e = r.y[n - 1] - 37;
+          var s = `Dal minuto 10 il disturbo ${dtxt}. Il <b>sensore</b> misura la temperatura, il <b>comparatore</b> la confronta con 37 °C e produce l'errore, l'<b>effettore</b> reagisce nel verso <i>opposto</i> con una forza K × errore (K = ${f(K, 1)}). `;
+          if (amp > 0.3) return { kind: 'warn', html: s + `Qui però la misura arriva con un ritardo di ${f(st.delay, 1)} min: quando l'effettore agisce, l'errore è già cambiato e <b>corregge troppo</b>, così la temperatura <b>oscilla</b> attorno al valore ideale${amp > 30 ? ' con ampiezza sempre maggiore (instabile)' : ''}. Con un ritardo, un guadagno troppo alto fa danni.` };
+          if (st.ff) return { kind: 'ok', html: s + `In più c'è il <b>controllo a preazione</b>: l'effettore conosce il disturbo in anticipo e lo contrasta <i>prima</i> che la temperatura cambi. Errore finale: ${f(e, 2)} °C.` };
+          if (st.adapt) return { kind: 'warn', html: s + `Il sensore però si <b>assuefà</b>: col tempo «si abitua» al nuovo valore, l'errore percepito si riduce e la correzione si indebolisce. La temperatura deriva verso il valore disturbato (errore ${f(e, 2)} °C).` };
+          return { kind: 'ok', html: s + `A regime la spinta dell'effettore eguaglia il disturbo e il sistema si ferma con un <b>errore residuo</b> di ${f(e, 2)} °C = disturbo/(1+K) = ${f(d, 1)}/${f(1 + K, 1)}. Più K è grande, più l'errore si riduce; non si annulla mai del tutto.` };
+        },
+        experiments: [
+          { label: 'Retroazione negativa', run: function () { fbBase(); }, why: function () { return `L'effettore contrasta il disturbo: la temperatura si sposta di soli <b>${F.fmt(Math.abs(last.y - 37), 1)} °C</b> invece di 2 °C. La retroazione negativa <b>riduce</b> l'errore, ma non lo azzera.`; } },
+          { label: 'Nessuna retroazione', run: function () { fbBase(); typeSel.set('open'); }, why: `Senza il canale di retroazione nessuno corregge: la temperatura segue tutto il disturbo (−2 °C). Confronta con la prova precedente.` },
+          { label: 'Retroazione positiva', run: function () { fbBase(); typeSel.set('pos'); }, why: `L'errore si autoamplifica: la variabile non torna al valore ideale ma si allontana sempre di più. È l'opposto dell'omeostasi.` },
+          { label: 'Guadagno basso (K = 1)', run: function () { fbBase(); sK.set(1); }, why: function () { return `Con K = 1 l'errore residuo è la metà del disturbo (${F.fmt(last.y - 37, 2)} °C): la correzione è debole.`; } },
+          { label: 'Guadagno alto (K = 30)', run: function () { fbBase(); sK.set(30); }, why: function () { return `Con K = 30 l'errore è piccolissimo (${F.fmt(last.y - 37, 2)} °C), ma non zero: la retroazione negativa proporzionale lascia sempre un errore residuo.`; } },
+          { label: 'Ritardo del sensore', run: function () { fbBase(); sDel.set(3); sK.set(3.5); }, why: `Il sensore «vede» la temperatura con 3 minuti di ritardo: la correzione arriva quando la situazione è già cambiata e il sistema oscilla. Molti ritmi fisiologici nascono così.` },
+          { label: 'Controllo a preazione', run: function () { fbBase(); tFF.set(true); }, why: `L'effettore anticipa il disturbo (per esempio si rabbrividisce prima di raffreddarsi): l'errore è quasi nullo senza aspettare che la variabile cambi.` },
+          { label: 'Assuefazione', run: function () { fbBase(); tAd.set(true); }, why: `Il sensore si adatta allo stimolo costante: la correzione cala nel tempo e l'errore cresce lentamente (è il principio dell'adattamento dei recettori).` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { p1.dispose(); cv.dispose(); } };
     }
   });
@@ -94,7 +131,7 @@
     short: 'Esempio di retroazione negativa: un carico di glucosio stimola l\'insulina, che riporta la glicemia al valore di riferimento.',
     mount: function (host, P) {
       var L = U.simLayout(host), st = { cond: P.cond || 'normale', meal: P.meal === undefined ? 75 : P.meal, ins: 0 };
-      var conds = { normale: { sensitivity: 1, beta: 1 }, resistenza: { sensitivity: 0.35, beta: 1 }, tipo2: { sensitivity: 0.25, beta: 0.4 }, tipo1: { sensitivity: 1, beta: 0.02 } };
+      var conds = { normale: { sensitivity: 1, beta: 1 }, resistenza: { sensitivity: 0.35, beta: 2 }, tipo2: { sensitivity: 0.25, beta: 0.4 }, tipo1: { sensitivity: 1, beta: 0.02 } };
       var cSel = U.select({ label: 'Condizione', value: st.cond, options: [['normale', 'Soggetto sano'], ['resistenza', 'Insulino-resistenza (β compensa)'], ['tipo2', 'Diabete tipo 2 (resistenza + deficit β)'], ['tipo1', 'Diabete tipo 1 (niente insulina)']], onChange: function (v) { st.cond = v; run(); } });
       var sM = U.slider({ label: 'Glucosio ingerito', min: 0, max: 100, step: 5, value: st.meal, digits: 0, unit: 'g', onInput: function (v) { st.meal = v; run(); } });
       var sI = U.slider({ label: 'Insulina iniettata (a 60 min)', min: 0, max: 100, step: 5, value: 0, digits: 0, unit: 'µU/mL', onInput: function (v) { st.ins = v; run(); } });
@@ -117,6 +154,38 @@
         ro.set('dx', st.meal === 75 ? dx : '(test standard: 75 g)');
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var gBase = function () { cSel.set('normale'); sM.set(75); sI.set(0); };
+      U.explainer(L, {
+        watch: ro,
+        base: gBase,
+        legend: [['--c1', 'glicemia (mmol/L)'], ['--c4', 'insulina nel sangue (µU/mL)']],
+        narrate: function () {
+          var f = F.fmt, c = conds[st.cond];
+          var r = F.glucoseModel({ sensitivity: c.sensitivity, beta: c.beta, mealGrams: st.meal, mealAt: 30, insulinAt: st.ins > 0 ? 90 : undefined, insulinDose: st.ins, tmax: 270 });
+          var at = function (t) { return r.G[r.t.findIndex(function (x) { return x >= t; })]; };
+          var pk = Math.max.apply(null, r.G), ipk = Math.max.apply(null, r.I), tpk = r.t[r.G.indexOf(pk)], g2 = at(150), fast = r.fasting[0];
+          if (st.meal === 0 && st.ins === 0) return `Senza carico di glucosio non c'è nulla da correggere: la glicemia resta a ${f(fast, 1)} mmol/L. È uno <b>stato stazionario</b>: la produzione del fegato e l'utilizzo dei tessuti si bilanciano, con poca insulina di base.`;
+          var s = `<b>Prima del pasto</b> la glicemia è ${f(fast, 1)} mmol/L. <b>Al minuto 30</b> il glucosio ingerito (${st.meal} g) viene assorbito: la glicemia sale fino a <b>${f(pk, 1)} mmol/L</b> (minuto ${f(tpk, 0)}). `, mid, kind = '';
+          if (st.cond === 'normale') { mid = `Le cellule β rilevano l'aumento e secernono insulina (picco ${f(ipk, 0)} µU/mL). L'insulina fa captare glucosio a muscolo e tessuto adiposo e frena la produzione del fegato: la glicemia <b>torna verso il valore iniziale</b> (a 2 ore: ${f(g2, 1)} mmol/L). È una retroazione negativa.`; kind = 'ok'; }
+          else if (st.cond === 'resistenza') { mid = `I tessuti rispondono poco all'insulina, quindi le cellule β <b>compensano</b> secernendone molta di più (picco ${f(ipk, 0)} µU/mL). La glicemia resta quasi normale (2 ore: ${f(g2, 1)}), ma a prezzo di un'insulina alta: è la fase che precede il diabete di tipo 2.`; }
+          else if (st.cond === 'tipo2') { mid = `Alla resistenza si aggiunge una secrezione insufficiente: l'insulina (picco ${f(ipk, 0)}) non basta a riportare la glicemia alla norma. A digiuno è già ${f(fast, 1)} e a 2 ore ${f(g2, 1)} mmol/L${g2 >= 11.1 ? ' (oltre 11,1: criterio di diabete)' : ''}.`; kind = g2 >= 11.1 ? 'bad' : 'warn'; }
+          else { mid = `Senza cellule β non c'è secrezione di insulina (picco ${f(ipk, 0)} µU/mL): il glucosio non rientra nei tessuti e la glicemia <b>resta alta</b> (2 ore: ${f(g2, 1)} mmol/L).`; kind = 'bad'; }
+          if (st.ins > 0) mid += ` Al minuto 90 hai iniettato insulina (${st.ins} µU/mL): la glicemia scende più in fretta, come nella terapia del diabete di tipo 1.`;
+          return { kind: kind, html: s + mid };
+        },
+        experiments: [
+          { label: 'Soggetto sano', run: function () { gBase(); }, why: `L'insulina riporta la glicemia vicino al valore iniziale: la retroazione negativa funziona.` },
+          { label: 'Insulino-resistenza', run: function () { gBase(); cSel.set('resistenza'); }, why: `La glicemia resta quasi normale, ma l'<b>insulina è più che doppia</b>: le cellule β compensano la scarsa sensibilità dei tessuti. Il sistema regge, ma lavora al limite.` },
+          { label: 'Diabete di tipo 2', run: function () { gBase(); cSel.set('tipo2'); }, why: `Resistenza + secrezione insufficiente: la glicemia sale di più e non rientra in 2 ore.` },
+          { label: 'Diabete di tipo 1', run: function () { gBase(); cSel.set('tipo1'); }, why: `Senza insulina l'anello di controllo è «aperto»: la glicemia sale e non scende.` },
+          { label: 'Tipo 1 + insulina', run: function () { gBase(); cSel.set('tipo1'); sI.set(60); }, why: `L'insulina iniettata sostituisce quella che le cellule β non producono: la glicemia scende dopo l'iniezione.` },
+          { label: 'Nessun pasto', run: function () { gBase(); sM.set(0); }, why: `Senza perturbazione la glicemia resta al valore di riferimento: è lo stato stazionario dell'omeostasi.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { pG.dispose(); pI.dispose(); } };
     }
   });
@@ -175,6 +244,33 @@
         cv.redraw();
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      pre.style.display = 'none';
+      U.explainer(L, {
+        watch: ro,
+        base: function () { sW.set(0); sN.set(0); },
+        legend: [['--k', 'liquido intracellulare (LIC)'], ['--cl', 'liquido interstiziale'], ['--na', 'plasma']],
+        narrate: function () {
+          var f = F.fmt, d = F.bodyWater({ mass: st.mass, sex: st.sex, addWater: st.water, addNaClmmol: st.nacl }), b = d.before, a = d.after;
+          if (st.water === 0 && st.nacl === 0) return `Situazione di partenza (${st.mass} kg): l'acqua totale è il ${st.sex === 'M' ? '60' : '50'}% del peso, ${f(b.TBW, 1)} L. Due terzi stanno <b>dentro le cellule</b> (LIC ${f(b.ICF, 1)} L), un terzo <b>fuori</b> (LEC ${f(b.ECF, 1)} L: interstizio ${f(b.inter, 1)} + plasma ${f(b.plasma, 1)}). Aggiungi acqua o sale e guarda dove va l'acqua: la regola è che l'osmolarità si equilibra tra dentro e fuori.`;
+          if (a.TBW <= 0 || a.ICF <= 0) return { kind: 'bad', html: 'Valori non fisiologici: riduci la perdita.' };
+          var dI = a.ICF - b.ICF, dE = a.ECF - b.ECF, why;
+          if (Math.abs(dI) < 0.05) why = `L'osmolarità finale (${f(a.osm, 0)} mOsm/L) è quasi uguale a quella iniziale: non c'è gradiente osmotico, quindi l'acqua <b>non si sposta</b> tra cellule e LEC. Tutto il liquido aggiunto o perso resta fuori dalle cellule (LEC ${dE >= 0 ? '+' : ''}${f(dE, 2)} L).`;
+          else if (dI > 0) why = `L'osmolarità è scesa a ${f(a.osm, 0)} mOsm/L: il liquido extracellulare è <b>ipotonico</b> per le cellule, che hanno ancora i loro soluti. Per osmosi l'acqua <b>entra nelle cellule</b> (LIC +${f(dI, 2)} L) finché le osmolarità si eguagliano.`;
+          else why = `L'osmolarità è salita a ${f(a.osm, 0)} mOsm/L: il liquido extracellulare è <b>ipertonico</b>. Il Na⁺ resta fuori dalle cellule, quindi l'acqua <b>esce dalle cellule</b> (LIC ${f(dI, 2)} L): le cellule si raggrinziscono.`;
+          return { kind: Math.abs(a.osm - 290) > 10 ? 'warn' : '', html: why };
+        },
+        experiments: [
+          { label: '1 L di acqua pura', run: function () { sW.set(1); sN.set(0); }, why: `L'acqua pura diluisce tutti i liquidi: si distribuisce in proporzione al volume dei compartimenti, circa due terzi nelle cellule. Il plasma aumenta pochissimo.` },
+          { label: '1 L di fisiologica (NaCl 0,9%)', run: function () { sW.set(1); sN.set(154); }, why: `La soluzione è isotonica: l'osmolarità non cambia e l'acqua <b>resta tutta fuori dalle cellule</b>. Per questo si usa per ripristinare il volume circolante.` },
+          { label: '1 L di salina al 3%', run: function () { sW.set(1); sN.set(513); }, why: `La soluzione è ipertonica: richiama acqua dalle cellule verso il LEC. Il volume extracellulare aumenta più di 1 L e le cellule si raggrinziscono.` },
+          { label: 'Disidratazione (−2 L)', run: function () { sW.set(-2); sN.set(0); }, why: `Perdere acqua pura concentra tutti i liquidi: l'osmolarità sale e l'acqua esce dalle cellule per compensare. Il corpo risponde con la sete e con l'ADH.` },
+          { label: 'Azzera', run: function () { sW.set(0); sN.set(0); }, why: `Si torna alla distribuzione di partenza.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });
@@ -263,6 +359,20 @@
         cv.redraw();
       }
       build();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var enSet = function (o2) { st.mode = 'singola'; mSel.set('singola', true); st.dG0 = o2.dG0; st.logQ = o2.logQ || 0; st.couple = !!o2.couple; build(); };
+      U.explainer(L, {
+        watch: ro,
+        experiments: [
+          { label: 'Reazione endoergonica da sola', run: function () { enSet({ dG0: 13.8 }); }, why: `Glucosio + Pᵢ → glucosio-6-fosfato ha ΔG°′ = +13,8 kJ/mol: da sola <b>non</b> procede (nel diagramma il livello sale).` },
+          { label: `Accoppiata all'ATP`, run: function () { enSet({ dG0: 13.8, couple: true }); }, why: `Con l'idrolisi di un ATP (circa −52 kJ/mol nella cellula) il ΔG totale diventa negativo e la reazione procede. L'ATP non «regala energia»: è la <b>somma dei ΔG</b> a diventare negativa.` },
+          { label: 'ΔG°′ negativo ma troppi prodotti', run: function () { enSet({ dG0: -20, logQ: 6 }); }, why: `Una reazione con ΔG°′ = −20 kJ/mol può andare all'indietro se i prodotti sono un milione di volte più concentrati dei reagenti: conta ΔG = ΔG°′ + RT ln Q, non solo ΔG°′.` },
+          { label: 'Ossidazione del glucosio', run: function () { mSel.set('glucosio'); }, why: `Il glucosio libera 2840 kJ/mol: nella cellula circa il 60% viene conservato come ATP, il resto diventa calore (II principio).` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });

@@ -44,6 +44,26 @@
       }
       upd();
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { sA.set(100); sB.set(100); sZ.set(1); sP.set(50); },
+        legend: [['--k', 'K⁺'], ['--cl', 'Cl⁻'], ['--c4', 'proteina (anione non diffusibile)']],
+        narrate: function () {
+          var f = F.fmt, d = F.donnan(st.a, st.b, st.P, st.z, st.T);
+          if (st.P <= 0) return `Senza proteine non c'è nulla che rompa la simmetria: K⁺ e Cl⁻ si distribuiscono in modo uguale ai due lati e il potenziale è zero.`;
+          return `Il lato 2 contiene proteine, anioni che <b>non possono attraversare</b> la membrana (${f(st.P, 0)} mM, ${st.z === 1 ? '1 carica negativa' : st.z + ' cariche negative'} ciascuna). K⁺ e Cl⁻ invece passano. Le cariche negative fisse trattengono il K⁺: il lato 2 ha più K⁺ (${f(d.K2, 1)} contro ${f(d.K1, 1)} mM) e meno Cl⁻ (${f(d.Cl2, 1)} contro ${f(d.Cl1, 1)} mM), perché il Cl⁻ è respinto. Il rapporto è lo stesso per i due ioni (${f(d.ratioK, 3)}): [K]₁[Cl]₁ = [K]₂[Cl]₂ (<b>regola di Donnan</b>). Ne risulta un potenziale di <b>${f(d.V, 1)} mV</b> (negativo dal lato delle proteine) e più particelle nel lato 2: un eccesso osmotico di ${f(d.dOsm, 1)} mOsm/L che richiamerebbe acqua (≈ ${f(d.pi_mmHg, 0)} mmHg).${st.a < 40 && st.b < 40 ? ' I sali sono poco concentrati rispetto alle proteine: l\'effetto è marcato.' : ''}`;
+        },
+        experiments: [
+          { label: 'Senza proteine', run: function () { sP.set(0); }, why: `Tutto simmetrico: nessuna differenza di concentrazione, potenziale zero, nessun eccesso osmotico.` },
+          { label: 'Proteine 50 mM', run: function () { sA.set(100); sB.set(100); sZ.set(1); sP.set(50); }, why: `Le proteine non possono uscire: nel lato 2 si accumulano K⁺ e mancano Cl⁻. Nasce un potenziale di diffusione e una differenza osmotica.` },
+          { label: '5 cariche per proteina', run: function () { sA.set(100); sB.set(100); sP.set(20); sZ.set(5); }, why: `Con più cariche negative per molecola ci sono più cationi trattenuti: l'asimmetria e il potenziale crescono.` },
+          { label: 'Sali molto concentrati', run: function () { sA.set(200); sB.set(200); sZ.set(1); sP.set(50); }, why: `Se i sali sono molto più concentrati delle proteine, l'effetto Donnan si attenua: il potenziale e l'eccesso osmotico diminuiscono.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });
@@ -106,6 +126,31 @@
       }
       upd();
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { cSel.set('neurone'); },
+        legend: [['--k', 'E K'], ['--na', 'E Na'], ['--cl', 'E Cl'], ['--text', 'triangolo: Vm calcolato']],
+        narrate: function () {
+          var f = F.fmt, T = st.T, EK = F.nernst(st.o.K, st.i.K, 1, T), ENa = F.nernst(st.o.Na, st.i.Na, 1, T), ECl = st.o.Cl > 0 ? F.nernst(st.o.Cl, st.i.Cl, -1, T) : null, Vm = F.ghk(st.P, st.o, st.i, T);
+          var s = `Il potenziale di riposo non coincide con l'E di nessuno ione: è un <b>potenziale di diffusione</b>, una media dei potenziali di equilibrio pesata dalle permeabilità. Qui K⁺ ha E = ${f(EK, 0)} mV, Na⁺ ha E = ${f(ENa, 0)} mV${ECl !== null ? ', Cl⁻ ha E = ' + f(ECl, 0) + ' mV' : ''}. Permeabilità relative: K⁺ 1, Na⁺ ${f(st.P.Na, 3)}${ECl !== null ? ', Cl⁻ ' + f(st.P.Cl, 2) : ''}. Risultato: Vm = <b>${f(Vm, 1)} mV</b>. `;
+          if (st.P.Na > 3) s += `Ora il Na⁺ è molto più permeabile del K⁺ e Vm si avvicina a E<sub>Na</sub>: è ciò che accade al <b>picco del potenziale d'azione</b>.`;
+          else if (st.P.Na < 0.005 && st.P.Cl < 0.05) s += `Passa quasi solo il K⁺: Vm ≈ E<sub>K</sub>, come nelle cellule gliali.`;
+          else s += `Il K⁺ domina perché ha la permeabilità maggiore, ma il piccolo contributo del Na⁺ (che tende a portare Vm verso ${f(ENa, 0)} mV) rende Vm meno negativo di E<sub>K</sub> di ${f(Vm - EK, 1)} mV.`;
+          if (st.o.K > 15) s += ` Con [K⁺]<sub>o</sub> alto E<sub>K</sub> si avvicina a zero e la membrana si depolarizza: è il motivo per cui l'iperpotassiemia altera l'eccitabilità (e può fermare il cuore).`;
+          return s;
+        },
+        experiments: [
+          { label: 'Neurone a riposo', run: function () { cSel.set('neurone'); }, why: `P<sub>Na</sub>/P<sub>K</sub> piccolo ma non nullo: Vm è vicino a E<sub>K</sub>, un poco più positivo.` },
+          { label: 'Picco del potenziale d\'azione', run: function () { cSel.set('neurone'); bAP.click(); }, why: `Quando i canali Na⁺ si aprono, P<sub>Na</sub> supera P<sub>K</sub> e Vm si avvicina a E<sub>Na</sub> (positivo): è la fase ascendente del PdA.` },
+          { label: 'K⁺ esterno alto (20 mM)', run: function () { cSel.set('neurone'); sKo.set(20); }, why: function () { return `Con 20 mM di K⁺ fuori E<sub>K</sub> sale a ${F.fmt(F.nernst(20, 140, 1, 37), 0)} mV e Vm lo segue: la cellula si depolarizza. Nel grafico Vm si appoggia alla retta di Nernst.`; } },
+          { label: 'Cellula gliale', run: function () { cSel.set('glia'); }, why: `Quasi solo canali K⁺ aperti: Vm coincide con E<sub>K</sub> (circa −90 mV a 37 °C con questi valori).` },
+          { label: 'Solo K⁺ (P Na = P Cl = 0)', run: function () { cSel.set('neurone'); sPNa.set(0); sPCl.set(0); }, why: `Con un solo ione permeante la GHK diventa l'equazione di Nernst: Vm = E<sub>K</sub>.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); cv.dispose(); } };
     }
   });
@@ -186,6 +231,33 @@
       }
       upd();
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var ciBase = function () { sK.set(0.1); sNa.set(0.005); sCl.set(0.01); sKo.set(5); tP.set(true); };
+      U.explainer(L, {
+        watch: ro,
+        base: ciBase,
+        legend: [['--k', 'K⁺'], ['--na', 'Na⁺'], ['--cl', 'Cl⁻'], ['--c5', 'pompa']],
+        narrate: function () {
+          var f = F.fmt, EK = F.nernst(st.Ko, 140, 1, 37), ENa = F.nernst(145, 12, 1, 37), ECl = -70, Ip = st.pump ? 0.35 : 0, gt = st.gK + st.gNa + st.gCl;
+          var Vm = F.chordVm({ K: st.gK, Na: st.gNa, Cl: st.gCl }, { K: EK, Na: ENa, Cl: ECl }, Ip), Vm0 = F.chordVm({ K: st.gK, Na: st.gNa, Cl: st.gCl }, { K: EK, Na: ENa, Cl: ECl }, 0);
+          var IK = st.gK * (Vm - EK), INa = st.gNa * (Vm - ENa), ICl = st.gCl * (Vm - ECl);
+          var s = `Ogni popolazione di canali è una <b>resistenza</b> (conduttanza g) in serie a una <b>batteria</b> (il suo potenziale di equilibrio E); il doppio strato è il <b>condensatore</b>, la pompa un <b>generatore di corrente</b>. A riposo Vm è costante, quindi la <b>somma delle correnti è zero</b>: il K⁺ esce (${f(IK, 2)} µA/cm²), il Na⁺ entra (${f(INa, 2)}), ${Math.abs(ICl) > 0.005 ? 'il Cl⁻ porta ' + f(ICl, 2) : 'il Cl⁻ contribuisce poco'}, e ${st.pump ? 'la pompa riporta fuori 3 Na⁺ per ogni 2 K⁺ (' + f(Ip, 2) + ')' : 'la pompa è spenta'}. `;
+          s += `Vm = <b>${f(Vm, 1)} mV</b> è la media dei potenziali di equilibrio pesata dalle conduttanze: K⁺ ${f(st.gK / gt * 100, 0)}%, Na⁺ ${f(st.gNa / gt * 100, 0)}%, Cl⁻ ${f(st.gCl / gt * 100, 0)}%. `;
+          if (st.gNa > st.gK) s += `Il Na⁺ ora ha la conduttanza maggiore e trascina Vm verso E<sub>Na</sub> (${f(ENa, 0)} mV): è la situazione del picco del potenziale d'azione.`;
+          else s += `Vm è vicino a E<sub>K</sub> (${f(EK, 0)} mV) perché il K⁺ ha la conduttanza maggiore, ma il Na⁺ lo rende meno negativo.`;
+          if (st.pump) s += ` La pompa contribuisce di ${f(Vm - Vm0, 1)} mV (iperpolarizzante).`;
+          return s;
+        },
+        experiments: [
+          { label: 'Riposo normale', run: function () { ciBase(); }, why: `Il K⁺ ha la conduttanza maggiore: Vm è vicino a E<sub>K</sub>, e le correnti dei vari ioni si bilanciano.` },
+          { label: 'Il Na⁺ domina (come nel PdA)', run: function () { ciBase(); sNa.set(0.3); }, why: `Quando i canali Na⁺ si aprono, g<sub>Na</sub> diventa la maggiore e Vm si porta verso E<sub>Na</sub>: è il picco del potenziale d'azione.` },
+          { label: 'K⁺ esterno alto (20 mM)', run: function () { ciBase(); sKo.set(20); }, why: `E<sub>K</sub> sale (meno negativo) e Vm lo segue: la cellula si depolarizza.` },
+          { label: 'Pompa spenta', run: function () { ciBase(); tP.set(false); }, why: `Il contributo diretto della pompa è di soli pochi mV: Vm si sposta poco subito. Nel tempo, però, senza pompa i gradienti si dissiperebbero e il potenziale scomparirebbe.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });

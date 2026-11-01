@@ -40,6 +40,41 @@
         p2.update({ series: [{ name: 'GFR', x: rs, y: gg.map(function (x) { return x.GFR; }), color: '--c1' }, { name: 'flusso plasmatico (RPF)', x: rs, y: gg.map(function (x) { return x.RPF; }), color: '--na' }, { x: [st.Reff], y: [g.GFR], type: 'points', color: '--c1', r: 6 }], ylim: [0, null], vlines: [{ x: st.Reff, label: 'attuale' }] });
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var glBase = function () { reset(); };
+      U.explainer(L, {
+        watch: ro,
+        base: glBase,
+        legend: [['--c1', 'P idrostatica nel capillare (spinge fuori)'], ['--na', 'P della capsula di Bowman + π oncotica (trattengono)'], ['--c3', 'verde: pressione netta di filtrazione']],
+        narrate: function () {
+          var f = F.fmt, g = F.glomerulus({ Raff: st.Raff, Reff: st.Reff, Pa: st.Pa, Cprot: st.C, PBS: st.PBS, Kf: st.Kf }), n = F.glomerulus({}), pr = g.profile, last = pr.x.length - 1;
+          var s = `Il plasma viene filtrato verso la capsula di Bowman perché la pressione idrostatica nel capillare (P<sub>GC</sub> = <b>${f(g.PGC, 0)} mmHg</b>) spinge fuori più di quanto trattengano la pressione nella capsula (${f(st.PBS, 0)} mmHg) e la pressione oncotica delle proteine plasmatiche (π<sub>GC</sub>). Man mano che l'acqua esce, le proteine restano nel capillare e si concentrano: π<sub>GC</sub> sale da ${f(pr.pi[0], 0)} a ${f(pr.pi[last], 0)} mmHg e la pressione netta di filtrazione scende da ${f(pr.NFP[0], 0)} a ${f(pr.NFP[last], 0)} mmHg (area verde). `;
+          if (g.equilibrium) s += `Verso la fine la pressione netta arriva a zero: <b>equilibrio di filtrazione</b>, l'ultimo tratto del capillare non filtra più. `;
+          s += `Risultato: GFR <b>${f(g.GFR, 0)} mL/min</b> (condizioni normali: ${f(n.GFR, 0)}), con un flusso plasmatico di ${f(g.RPF, 0)} mL/min. `;
+          var c = [];
+          if (st.Raff > 1.05) c.push(`L'<b>afferente stretta</b> (×${f(st.Raff, 2)}) riduce sia il flusso sia la pressione nel glomerulo: la GFR cala.`);
+          if (st.Raff < 0.95) c.push(`L'<b>afferente dilatata</b> aumenta flusso e pressione: la GFR sale.`);
+          if (st.Reff > 1.05) c.push(`L'<b>efferente stretta</b> (×${f(st.Reff, 2)}) fa salire P<sub>GC</sub> (il sangue esce a fatica) ma riduce il flusso plasmatico: la GFR aumenta per costrizioni moderate, ma se è forte il flusso diventa così basso che le proteine si concentrano subito e la GFR torna a calare (curva in basso: ha un massimo).`);
+          if (st.Reff < 0.95) c.push(`L'<b>efferente dilatata</b> abbassa P<sub>GC</sub>: la GFR cala.`);
+          if (Math.abs(st.C - 7) > 0.3) c.push(st.C < 7 ? `Con <b>poche proteine</b> la pressione oncotica è bassa: trattiene meno e la GFR aumenta.` : `Con <b>molte proteine</b> la pressione oncotica è alta: trattiene di più e la GFR cala.`);
+          if (st.PBS > 17) c.push(`Con la <b>pressione di Bowman alta</b> (per esempio per un'ostruzione delle vie urinarie) la filtrazione è ostacolata e la GFR cala.`);
+          if (Math.abs(st.Pa - 100) > 3) c.push(`Cambiando la <b>pressione arteriosa</b> senza autoregolazione (qui non è inclusa) la GFR varia con essa; nel rene reale resta quasi costante tra circa 80 e 180 mmHg.`);
+          if (Math.abs(st.Kf - 1) > 0.05) c.push(st.Kf < 1 ? `Un <b>K<sub>f</sub> ridotto</b> (meno superficie o permeabilità filtrante, per esempio per un danno glomerulare) abbassa la GFR.` : `Un <b>K<sub>f</sub> aumentato</b> alza la GFR.`);
+          return s + c.join(' ');
+        },
+        experiments: [
+          { label: 'Condizioni normali', run: function () { glBase(); }, why: `P<sub>GC</sub> circa 55 mmHg, GFR circa 125 mL/min: valori di riferimento.` },
+          { label: 'Afferente stretta (simpatico)', run: function () { glBase(); sA.set(1.5); }, why: `Meno sangue entra nel glomerulo e la pressione cala: sia la GFR sia il flusso plasmatico diminuiscono.` },
+          { label: 'Efferente stretta (angiotensina II)', run: function () { glBase(); sE.set(1.6); }, why: `La pressione nel glomerulo sale perché il sangue fatica a uscire, il flusso plasmatico cala: la frazione di filtrazione aumenta e la GFR sale.` },
+          { label: 'Efferente molto stretta', run: function () { glBase(); sE.set(4); }, why: `La GFR non cresce all'infinito: ha un massimo per costrizioni moderate e poi ridiscende. Con una costrizione estrema il flusso plasmatico scende a meno della metà, le proteine si concentrano subito, π sale fino a fermare la filtrazione (equilibrio) e il vantaggio della pressione alta si perde.` },
+          { label: 'Ipoproteinemia', run: function () { glBase(); sC.set(4.5); }, why: `Meno proteine = pressione oncotica più bassa = meno forza che trattiene l'acqua: la GFR aumenta molto.` },
+          { label: 'Ostruzione urinaria', run: function () { glBase(); sB.set(30); }, why: `Una pressione più alta nella capsula si oppone alla filtrazione: la GFR cala molto.` },
+          { label: 'Pressione arteriosa 140 (senza autoregolazione)', run: function () { glBase(); sPa.set(140); }, why: `Nel modello la GFR segue la pressione. Nel rene reale l'autoregolazione (miogena e feedback tubulo-glomerulare) tiene quasi costante la GFR tra circa 80 e 180 mmHg.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { p1.dispose(); p2.dispose(); } };
     }
   });
@@ -111,6 +146,38 @@
         cv.redraw();
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var nfBase = function () { sP.set(287); sL.set(900); mSel.set('normal'); };
+      U.explainer(L, {
+        watch: ro,
+        base: nfBase,
+        legend: [['#2f6fd0', 'blu: liquido diluito (osmolarità bassa)'], ['#d9a63a', 'giallo/verde: osmolarità intermedia'], ['#d03a2f', 'rosso: liquido concentrato (osmolarità alta)']],
+        narrate: function () {
+          var f = F.fmt, sn = ro.snapshot(), adh = parseFloat(sn[0].value.replace(',', '.')), s;
+          var pos = st.Posm > 281 ? `sopra` : `sotto`;
+          if (st.mode === 'dic') s = `<b>Diabete insipido centrale</b>: l'ipotalamo non produce ADH (${sn[0].value}), anche se il plasma è a ${f(st.Posm, 1)} mOsm/kg. Senza ADH le acquaporine AQP2 non vengono inserite nella membrana del dotto collettore, che resta impermeabile all'acqua: l'urina rimane diluita (${sn[1].value}) e abbondante (${sn[2].value}, poliuria). Il paziente perde acqua, l'osmolarità plasmatica sale e provoca sete intensa.`;
+          else if (st.mode === 'din') s = `<b>Diabete insipido nefrogenico</b>: l'ADH è presente (${sn[0].value}), ma il rene non risponde (recettore V2 o AQP2 non funzionanti). Il dotto collettore resta impermeabile all'acqua e il gradiente midollare si dissipa: urina diluita (${sn[1].value}) e abbondante (${sn[2].value}). L'ADH viene secreto normalmente (e salirebbe ancora se il plasma diventasse iperosmotico), ma senza recettori funzionanti è inutile.`;
+          else if (st.mode === 'siadh') s = `<b>SIADH</b>: l'ADH è alto (${sn[0].value}) qualunque sia l'osmolarità del plasma (qui ${f(st.Posm, 1)} mOsm/kg). Le AQP2 restano sempre inserite, il rene risparmia acqua e produce urina concentrata (${sn[1].value}) in poca quantità (${sn[2].value}) anche se il plasma è già diluito: l'acqua si accumula, il sodio plasmatico si diluisce (iponatriemia).`;
+          else {
+            s = `L'osmolarità plasmatica è <b>${f(st.Posm, 1)} mOsm/kg</b>, ${pos} la soglia di circa 280 per la secrezione di ADH. Gli osmocettori dell'ipotalamo rispondono: ADH = <b>${sn[0].value}</b>. `;
+            if (adh < 1) s += `Con poco ADH le acquaporine AQP2 non sono inserite: il dotto collettore, che attraversa la midollare ipertonica, resta impermeabile all'acqua e il liquido esce diluito. Urina <b>${sn[1].value}</b>, volume <b>${sn[2].value}</b>: si elimina acqua in eccesso (clearance dell'acqua libera positiva: ${sn[3].value}).`;
+            else s += `L'ADH si lega ai recettori V2, che fanno inserire acquaporine AQP2 nella membrana apicale del dotto collettore: l'acqua esce per osmosi verso la midollare ipertonica (fino a ${f(1200, 0)} mOsm/L) e l'urina si concentra: <b>${sn[1].value}</b>, volume <b>${sn[2].value}</b>. L'acqua viene risparmiata (clearance dell'acqua libera: ${sn[3].value}). Il volume non può scendere sotto carico osmotico / 1200: è il volume minimo obbligato.`;
+          }
+          return s;
+        },
+        experiments: [
+          { label: 'Normale', run: function () { nfBase(); }, why: `Plasma a 287 mOsm/kg: ADH moderato, urina un po' concentrata.` },
+          { label: 'Dopo aver bevuto 1,5 L', run: function () { nfBase(); sP.set(281); }, why: `Il plasma si diluisce, l'ADH quasi scompare, le AQP2 vengono rimosse dalla membrana: si elimina l'acqua in eccesso con urina diluita e abbondante (i volumi sono espressi per giorno, come se la condizione durasse 24 ore).` },
+          { label: 'Disidratazione', run: function () { nfBase(); sP.set(298); }, why: `Il plasma è più concentrato: l'ADH sale molto, l'urina è al massimo della concentrazione e il volume minimo, per risparmiare acqua (e c'è sete).` },
+          { label: 'Diabete insipido centrale', run: function () { nfBase(); mSel.set('dic'); }, why: `Senza ADH il dotto è impermeabile: poliuria con urina diluita. È curabile con ADH sintetico (desmopressina).` },
+          { label: 'Diabete insipido nefrogenico', run: function () { nfBase(); mSel.set('din'); }, why: `L'ADH c'è ma il rene non risponde: stessi sintomi, ma la desmopressina non funziona perché il difetto è nel recettore V2/AQP2.` },
+          { label: 'SIADH (plasma diluito)', run: function () { nfBase(); sP.set(281); mSel.set('siadh'); }, why: `L'ADH resta alto anche con plasma già diluito: l'urina resta concentrata e poca, l'acqua si accumula.` },
+          { label: 'Carico osmotico alto (1500)', base: function () { nfBase(); sP.set(298); }, run: function () { nfBase(); sP.set(298); sL.set(1500); }, why: `Partendo dalla disidratazione (urina già al massimo di 1200 mOsm/L): con più soluti da eliminare e la stessa osmolarità massima serve più acqua, quindi il volume minimo obbligato sale (carico / 1200).` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });
@@ -152,6 +219,32 @@
         cv.redraw();
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var biBase = function () { sD.set(2100); sS.set(100); sL.set(900); };
+      U.explainer(L, {
+        watch: ro,
+        base: biBase,
+        legend: [['--c1', 'barra sinistra: entrate'], ['--c3', 'urina: unica uscita regolata dal rene']],
+        narrate: function () {
+          var f = F.fmt, inTot = st.drink + 200, other = 350 + 350 + st.sweat + 100, urine = inTot - other, osm = urine > 0 ? st.load / (urine / 1000) : Infinity;
+          var s = `Entrate: ${f(st.drink, 0)} mL di bevande + 200 mL di acqua prodotta dal metabolismo = <b>${f(inTot, 0)} mL</b>. Uscite non regolate dal rene: cute 350, respirazione 350, sudore ${f(st.sweat, 0)}, feci 100 = <b>${f(other, 0)} mL</b>. Il rene può modificare solo l'urina: per pareggiare il bilancio deve produrne <b>${f(urine, 0)} mL</b> (${f(inTot, 0)} − ${f(other, 0)}). `;
+          if (urine <= 0) return { kind: 'bad', html: s + `Ma le uscite superano già le entrate anche con urina uguale a zero: il bilancio è negativo di ${f(-urine, 0)} mL, quindi disidratazione, aumento di ADH e sete.` };
+          if (osm > 1200) return { kind: 'bad', html: s + `Per eliminare ${f(st.load, 0)} mOsm in quel volume l'urina dovrebbe avere ${f(osm, 0)} mOsm/L, ma il rene non riesce a superare circa 1200: bisognerebbe produrre almeno ${f(st.load / 1.2, 0)} mL di urina, e quindi bere di più o sudare meno.` };
+          if (osm < 50) return { kind: 'warn', html: s + `Per smaltire quell'acqua l'urina dovrebbe avere ${f(osm, 0)} mOsm/L, ma il rene non può diluire sotto circa 50: l'acqua in eccesso si accumula e il sodio plasmatico si diluisce (iponatriemia).` };
+          return { kind: 'ok', html: s + `Quell'urina ha una osmolarità di ${f(osm, 0)} mOsm/L (carico ${f(st.load, 0)} mOsm/giorno), dentro i limiti 50–1200 del rene: il pareggio è possibile, e l'ADH regola l'osmolarità per ottenerlo.` };
+        },
+        experiments: [
+          { label: 'Giornata normale', run: function () { biBase(); }, why: `Entrate 2300 mL e uscite extrarenali 900 mL: servono 1400 mL di urina, con osmolarità di circa 640 mOsm/L.` },
+          { label: 'Poca acqua (500 mL)', run: function () { biBase(); sD.set(500); }, why: `Le entrate (700 mL) sono inferiori alle uscite che il rene non controlla (900 mL): anche con urina uguale a zero il bilancio è negativo e non si può pareggiare.` },
+          { label: 'Sudorazione intensa (3000 mL)', run: function () { biBase(); sS.set(3000); }, why: `Il sudore porta via acqua che il rene non può recuperare del tutto: senza bere di più il bilancio diventa negativo.` },
+          { label: 'Sudorazione + bere 5000 mL', run: function () { biBase(); sS.set(3000); sD.set(5000); }, why: `Bevendo di più le entrate compensano il sudore: il pareggio richiede la stessa quantità di urina di una giornata normale (1400 mL), quindi nulla cambia nel rene.` },
+          { label: 'Troppa acqua (6000 mL)', run: function () { biBase(); sD.set(6000); }, why: `Il rene può diluire l'urina solo fino a circa 50 mOsm/L: con troppa acqua il volume necessario richiede una diluizione impossibile e si rischia l'iponatriemia.` },
+          { label: 'Dieta ricca di soluti (1500 mOsm)', run: function () { biBase(); sL.set(1500); sD.set(1000); }, why: `Più soluti da eliminare richiedono più acqua: con poche bevande l'urina dovrebbe essere troppo concentrata.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });

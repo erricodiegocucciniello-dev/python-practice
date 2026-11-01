@@ -29,6 +29,16 @@ Per averlo online (anche dal telefono) puoi pubblicare la cartella con GitHub Pa
 | Somatosensoriale | 29 | meccanocettori, discriminazione di due punti |
 | Rene | 30 | glomerulo (Starling), nefrone e ADH, bilancio idrico |
 
+## Capire cosa sta succedendo
+
+Ogni simulatore ha in alto un riquadro di spiegazione (`js/ui/explain.js`):
+
+- **Cosa sta succedendo**: un testo che si riscrive da solo a ogni movimento dei comandi, con i numeri del momento e la causa di ciò che si vede (per esempio: «la corrente è sottosoglia, la membrana torna al riposo senza potenziale d'azione»). Nei simulatori 3D che animano una sequenza c'è invece una barra di stato che descrive ogni fase.
+- **Prova**: bottoni che impostano da soli una situazione tipica (un farmaco, una malattia, un caso limite) e mostrano una tabella **Partenza → Dopo** con ciò che cambia, più il perché.
+- **Legenda dei colori** quando il grafico ne usa molti. Nel potenziale d'azione le fasi sono numerate sul grafico (① salita, ② picco, ③ discesa, ④ iperpolarizzazione).
+
+I testi sono scritti a mano a partire dalle slide e dai valori calcolati dal modello; la parte numerica viene sempre dal simulatore, mai scritta a mano.
+
 ## Modelli e validazione
 
 I simulatori calcolano in tempo reale le equazioni della fisiologia: Nernst, Goldman-Hodgkin-Katz, Gibbs-Donnan, Hodgkin-Huxley (1952), Connor-Stevens (1977), cavo a compartimenti (amielinico e mielinico), catena di Markov per il canale singolo, rilascio quantale di Poisson/binomiale, Fick, Renkin, van't Hoff, Kedem-Katchalsky, Michaelis-Menten, Starling con Landis-Pappenheimer, ecc. Ogni simulatore ha una sezione "Modello e parametri usati" che dichiara le ipotesi e indica dove un modello è semplificato a scopo didattico.
@@ -48,7 +58,7 @@ Il motore è verificato da test automatici che confrontano i risultati con valor
 
 ```bash
 node --test tests/core.test.js        # 25 test numerici del motore
-node tests/browser.test.js            # apre tutte le pagine in Chromium (richiede Playwright)
+node tests/browser.test.js            # apre tutte le pagine in Chromium (richiede Playwright), clicca ogni «Prova»
 ```
 
 ## Struttura dei file
@@ -57,7 +67,7 @@ node tests/browser.test.js            # apre tutte le pagine in Chromium (richie
 index.html                 pagina unica (apribile con doppio clic)
 css/style.css              stile, tema chiaro/scuro
 js/core/                   motore numerico (funziona anche in Node per i test)
-js/ui/                     componenti, grafici, scene 3D
+js/ui/                     componenti, grafici, scene 3D, riquadro di spiegazione (explain.js)
 js/sims/                   i 40 simulatori
 js/lessons.js              contenuti delle 31 lezioni
 vendor/                    three.js r147 (MIT), KaTeX 0.16.9 (MIT)

@@ -69,6 +69,25 @@
       }
       reset();
       var loop = U.loop(holder, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        poll: 600,
+        legend: [['--c2', 'compartimento 1 (sinistra)'], ['--c1', 'compartimento 2 (destra)'], ['--ok', 'tratteggio: equilibrio (C₁ = C₂)']],
+        narrate: function () {
+          var a = parts.filter(function (p) { return p[0] < W0 / 2; }).length, b = parts.length - a, dif = (a - b) / parts.length;
+          var s = `Ogni punto è una molecola in <b>moto casuale</b> (browniano): non «sa» dove deve andare. La membrana al centro la blocca, tranne che nei ${st.pores} pori. Ogni molecola ha la stessa probabilità di imboccare un poro, quindi i passaggi da sinistra a destra sono proporzionali a quante molecole ci sono a sinistra (${a}), e quelli opposti a quante ce ne sono a destra (${b}). `;
+          if (Math.abs(dif) > 0.12) return s + `Qui prevalgono i passaggi da <b>${dif > 0 ? 'sinistra a destra' : 'destra a sinistra'}</b>: c'è un <b>flusso netto</b> dal lato più concentrato a quello meno concentrato, proporzionale alla differenza (C₁ − C₂): è la prima legge di Fick. Man mano che le concentrazioni si avvicinano il flusso cala, per questo la curva si appiattisce.`;
+          return { kind: 'ok', html: s + `Ora i due lati hanno quasi la stessa concentrazione: i passaggi nei due sensi si <b>bilanciano</b> e il flusso netto è zero. Le molecole però continuano a muoversi e a passare dai pori: è un <b>equilibrio dinamico</b>.` };
+        },
+        experiments: [
+          { label: 'Pochi pori (1)', run: function () { sP.set(1); reset(); }, why: `Con un solo poro passano meno molecole al secondo: la permeabilità è bassa e l'equilibrio arriva molto più tardi (la costante di tempo è τ = V/2PA).` },
+          { label: 'Molti pori (12)', run: function () { sP.set(12); reset(); }, why: `Più pori = più permeabilità: l'equilibrio si raggiunge in fretta, ma il valore finale (metà e metà) è lo stesso.` },
+          { label: 'Aggiungi soluto a destra', run: function () { bE.click(); }, why: `Ora il lato destro è più concentrato: il flusso netto cambia direzione, dalla destra verso la sinistra, finché le concentrazioni si riequilibrano.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { loop.stop(); plot.dispose(); cv.dispose(); } };
     }
   });
@@ -113,6 +132,26 @@
         });
       }
       upd();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { mSel.set('Glucosio'); sX.set(10); },
+        narrate: function () {
+          var f = F.fmt, D = F.Dwater[st.mol], tt = F.tDiff(st.x * 1e-4, D);
+          var dist = st.x < 1 ? f(st.x * 1000, 0) + ' nm' : (st.x < 1000 ? f(st.x, 1) + ' µm' : (st.x < 1e4 ? f(st.x / 1000, 1) + ' mm' : f(st.x / 1e4, 1) + ' cm'));
+          var ctx = st.x <= 0.1 ? `È la scala della <b>membrana</b> o della <b>fessura sinaptica</b>: la diffusione è praticamente istantanea.` : (st.x <= 50 ? `È la scala di una <b>cellula</b>: la diffusione basta a distribuire le molecole in millisecondi.` : (st.x < 5000 ? `Su queste distanze la diffusione è già lenta: per questo nei tessuti nessuna cellula è lontana da un capillare più di qualche decina di µm.` : `Su distanze macroscopiche la diffusione è <b>lentissima</b> (ore o giorni): il corpo usa il <b>flusso di massa</b>, cioè la circolazione, per trasportare le sostanze.`));
+          return `${st.mol} (D = ${f(D, 1)} cm²/s) impiega in media <b>${human(tt)}</b> per diffondere per ${dist}. ${ctx} Il tempo cresce col <b>quadrato</b> della distanza (t = x²/2D): se la distanza raddoppia il tempo diventa ${human(4 * tt)}.`;
+        },
+        experiments: [
+          { label: 'Dentro una cellula (10 µm)', run: function () { mSel.set('Glucosio'); sX.set(10); }, why: `In una cellula la diffusione è rapidissima: non servono sistemi di trasporto interni per i piccoli soluti.` },
+          { label: 'Fessura sinaptica (50 nm)', run: function () { mSel.set('Acetilcolina'); sX.set(0.05); }, why: `L'acetilcolina attraversa la fessura in circa 1–2 µs: la diffusione non è il passo lento della trasmissione sinaptica.` },
+          { label: '1 cm', run: function () { mSel.set('Glucosio'); sX.set(10000); }, why: `Su 1 cm il tempo è di ore: moltiplicare la distanza per 1000 moltiplica il tempo per un milione. Senza sangue e capillari gli organismi grandi non potrebbero esistere.` },
+          { label: 'Una proteina (albumina)', run: function () { mSel.set('Albumina'); sX.set(10); }, why: `Le molecole più grandi hanno un coefficiente di diffusione minore (D ∝ 1/raggio) e impiegano più tempo.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); } };
     }
   });
@@ -160,7 +199,7 @@
       function frame(dt) {
         if (st.open) {
           var z = ions[st.ion][1], RTF = F.RTF(st.T) / 1000, Pk = 2e-6 * st.perm; // cm/s
-          var simDt = Math.min(dt, 0.05) * 1.5e-3; // 1,5 ms di simulazione per ogni secondo reale
+          var simDt = Math.min(dt, 0.05) * 8e-3; // 8 ms di simulazione per ogni secondo reale
           var nsub = 40, h = simDt / nsub;
           for (var k = 0; k < nsub; k++) {
             var ci = st.ci * 1e-3 - molMoved / Vol; // mol/L
@@ -175,7 +214,7 @@
           }
           st.t += simDt * 1000;
           st.hist.t.push(st.t); st.hist.V.push(st.V);
-          if (st.t > 6) { st.open = false; bO.textContent = 'Apri i canali'; }
+          if (st.t > 40) { st.open = false; bO.textContent = 'Apri i canali'; }
           upd();
         }
         cv.redraw();
@@ -216,6 +255,28 @@
       });
       reset();
       var loop = U.loop(holder, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var nl = function (ion, perm) { iSel.set(ion); sPm.set(perm || 1); reset(); bO.click(); };
+      U.explainer(L, {
+        poll: 400,
+        legend: [['--c5', 'freccia gialla: forza chimica (gradiente di concentrazione)'], ['--c4', 'freccia viola: forza elettrica (potenziale)']],
+        narrate: function () {
+          var f = F.fmt, io = ions[st.ion], z = io[1], name = io[0], E = F.nernst(st.co, st.ci, z, st.T), out = st.ci > st.co;
+          var dirTxt = out ? 'uscire' : 'entrare', inSign = ((out && z > 0) || (!out && z < 0)) ? 'negativo' : 'positivo';
+          if (Math.abs(molMoved) === 0 && !st.open) return `${name} è più concentrato ${out ? 'dentro' : 'fuori'} (${f(st.ci, st.ci < 1 ? 4 : 0)} mM dentro, ${f(st.co, st.co < 1 ? 4 : 0)} mM fuori): c'è una <b>forza chimica</b> che lo spinge a ${dirTxt} (freccia gialla). I canali sono chiusi, quindi non passa nulla e il potenziale è 0 mV. Premi «Apri i canali».`;
+          if (Math.abs(st.V - E) >= 1.5) return `I canali selettivi per ${name} sono aperti: lo ione ${out ? 'esce' : 'entra'} seguendo il gradiente di concentrazione e porta con sé carica. L'interno diventa <b>${inSign}</b> (ora ${f(st.V, 1)} mV). Questo potenziale crea una <b>forza elettrica</b> (freccia viola) che si oppone a quella chimica: il flusso netto rallenta man mano che V si avvicina a E = ${f(E, 1)} mV.${st.open ? '' : ' (I canali si sono richiusi prima di arrivare all\'equilibrio: riaprili.)'}`;
+          return { kind: 'ok', html: `<b>Equilibrio elettrochimico</b>: forza chimica ed elettrica sono uguali e opposte, il flusso netto è nullo e il potenziale (${f(st.V, 1)} mV) coincide con quello di Nernst, E = ${f(E, 1)} mV. Per arrivarci è bastata una quantità minuscola di ioni (${f(Math.abs(molMoved) * 6.022e23, 1)}, cioè ${f(Math.abs(molMoved) / (st.ci * 1e-3 * Vol) * 100, 4)}% di quelli interni): le concentrazioni non sono praticamente cambiate. Più canali aprono = si arriva prima, ma E non cambia.` };
+        },
+        experiments: [
+          { label: 'K⁺ (esce)', run: function () { nl('K'); }, why: `Il K⁺ è più concentrato dentro: esce portando carica positiva fuori, l'interno diventa negativo e V tende a E<sub>K</sub> ≈ −89 mV.` },
+          { label: 'Na⁺ (entra)', run: function () { nl('Na'); }, why: `Il Na⁺ è più concentrato fuori: entra e rende l'interno positivo. V tende a E<sub>Na</sub> ≈ +66 mV, un valore positivo.` },
+          { label: 'Cl⁻ (anione)', run: function () { nl('Cl'); }, why: `Il Cl⁻ ha carica negativa ed è più concentrato fuori: entra e porta carica <i>negativa</i> all'interno. V tende a E<sub>Cl</sub> ≈ −64 mV: il segno è opposto a quello dello stesso gradiente per un catione.` },
+          { label: 'K⁺ con 5× più canali', run: function () { nl('K', 5); }, why: `Il potenziale finale è lo <b>stesso</b>, ma si raggiunge circa 5 volte più in fretta: la permeabilità cambia la velocità, non il valore di equilibrio.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { loop.stop(); plot.dispose(); cv.dispose(); } };
     }
   });
@@ -282,6 +343,30 @@
         }
       }
       build();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var pmSet = function (o2) { st.mode = o2.mode; mSel.set(o2.mode, true); if (o2.beta) st.beta = o2.beta; if (o2.pore) st.pore = o2.pore; build(); };
+      U.explainer(L, {
+        watch: ro,
+        narrate: function () {
+          var f = F.fmt;
+          if (st.mode === 'lipidi') {
+            var Pm = F.permeability(st.beta, st.D, st.dx * 1e-7);
+            var cls = Pm > 1e-3 ? 'molto permeabile (come O₂, CO₂, etanolo)' : (Pm > 1e-6 ? 'moderatamente permeabile (come acqua e urea)' : (Pm > 1e-9 ? 'poco permeabile (come il glucosio)' : 'praticamente impermeabile (come gli ioni)'));
+            return `Per attraversare la membrana attraverso i lipidi una molecola deve prima <b>sciogliersi</b> nel doppio strato (la facilità è il coefficiente di ripartizione olio/acqua, β = ${f(st.beta, 2)}) e poi <b>diffondere</b> nello spessore di ${f(st.dx, 1)} nm con D<sub>m</sub> = ${f(st.D, 1)} cm²/s. La permeabilità è P = β·D<sub>m</sub>/Δx = <b>${f(Pm, 2)} cm/s</b>: ${cls}. I punti blu nel grafico sono molecole reali: gli ioni (carichi, con β minuscolo) non passano dai lipidi, servono canali o trasportatori.`;
+          }
+          var p = st.pore;
+          return `Nel poro la molecola avanza in fila singola e urta le pareti: più il suo raggio si avvicina a quello del poro (${f(p, 1)} Å), più il moto è <b>ostacolato</b> (fattore di Renkin). Con questo poro l'acqua (raggio 1,4 Å) passa al ${f(F.renkin(1.4 / p) * 100, 0)}%, l'urea al ${f(F.renkin(1.8 / p) * 100, 0)}%, il glucosio (3,6 Å) al <b>${f(F.renkin(3.6 / p) * 100, 1)}%</b>, il saccarosio (4,4 Å) al ${f(F.renkin(4.4 / p) * 100, 1)}%. Una particella grande quanto il poro non passa affatto.`;
+        },
+        experiments: [
+          { label: 'Molecola liposolubile (β = 1)', run: function () { pmSet({ mode: 'lipidi', beta: 1 }); }, why: `Con β alto la molecola si scioglie bene nei lipidi: permeabilità alta, come O₂ o etanolo.` },
+          { label: 'Ione (β = 10⁻⁸)', run: function () { pmSet({ mode: 'lipidi', beta: 1e-8 }); }, why: `Una particella carica non si scioglie nei lipidi (β minuscolo): la permeabilità è bassissima. Gli ioni passano solo dai <b>canali</b>.` },
+          { label: 'Poro stretto (4 Å)', run: function () { pmSet({ mode: 'pori', pore: 4 }); }, why: function () { var r = F.renkin; return `In un poro di 8 Å di diametro (l'«ipotesi del setaccio») la diffusione è ostacolata anche per le molecole piccole: rispetto alla diffusione libera passa il ${F.fmt(r(1.4 / 4) * 100, 0)}% per l'acqua e il ${F.fmt(r(1.8 / 4) * 100, 0)}% per l'urea, ma solo il ${F.fmt(r(3.6 / 4) * 100, 1)}% per il glucosio, che ha quasi il raggio del poro.`; } },
+          { label: 'Poro largo (10 Å)', run: function () { pmSet({ mode: 'pori', pore: 10 }); }, why: function () { return `Con un poro più largo (raggio 10 Å) il glucosio non è più quasi bloccato: passa il ${F.fmt(F.renkin(3.6 / 10) * 100, 0)}% della diffusione libera. Più la particella è piccola rispetto al poro, meno è ostacolata.`; } }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); } };
     }
   });
@@ -341,7 +426,7 @@
       }
       function start() {
         var s = sols[st.sol], Pf = st.aqp === 'aqp' ? 0.02 : 0.004;
-        sim = F.RBC.simulate({ osmImpOut: s[1], Cp: s[2], sigma: s[3], Ps: s[4], Pf: Pf, tmax: s[4] > 0 && s[4] < 1e-5 ? 120 : 10, dt: 0.001, sample: 0.02 });
+        sim = F.RBC.simulate({ osmImpOut: s[1], Cp: s[2], sigma: s[3], Ps: s[4], Pf: Pf, tmax: s[4] > 0 && s[4] < 1e-5 ? 120 : (Pf < 0.01 ? 60 : 10), dt: 0.002, sample: 0.05 });
         tPlay = 0;
         var Vline = sim.V.map(function (v) { return Math.min(v, F.RBC.Vcrit); });
         var tl = sim.lysed ? sim.t.filter(function (t) { return t <= sim.tLysis; }) : sim.t;
@@ -364,6 +449,38 @@
       start();
       var loop = null;
       if (scn) scn.onFrame(frame); else loop = U.loop(L.main, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        poll: 700,
+        narrate: function () {
+          var f = F.fmt;
+          var T = {
+            iso: `La soluzione ha circa 290 mOsm/L, come il citoplasma: è <b>isotonica</b>. L'acqua entra ed esce alla stessa velocità e il volume resta 90 fL.`,
+            hypo: `L'esterno ha circa metà dei soluti del citoplasma (≈145 mOsm/L): è <b>ipotonico</b>. Dentro la cellula ci sono più soluti non diffusibili (emoglobina, ioni) che fuori, quindi l'acqua <b>entra</b> per osmosi e la cellula si gonfia verso la forma sferica.`,
+            hypo2: `L'esterno è ipotonico (≈195 mOsm/L): l'acqua <b>entra</b> per osmosi e la cellula si gonfia.`,
+            water: `In acqua distillata non c'è soluto fuori: l'acqua entra senza controparte e la cellula si gonfia fino a rompersi.`,
+            hyper: `L'esterno ha il doppio dei soluti (≈580 mOsm/L): è <b>ipertonico</b>. L'acqua <b>esce</b> dalla cellula, che si raggrinzisce (crenatura).`,
+            urea: `300 mM di urea hanno la stessa osmolarità del citoplasma (<b>isosmotica</b>), ma l'urea attraversa la membrana: entra nella cellula secondo gradiente e l'acqua la segue. La soluzione è quindi <b>ipotonica</b> e la cellula si gonfia. La <b>tonicità</b> dipende solo dai soluti che NON passano.`,
+            gly: `Il glicerolo è isosmotico ma permea lentamente: entra nella cellula e con lui l'acqua. Il rigonfiamento è molto più lento che con l'urea.`,
+            sucr: `Il saccarosio non attraversa la membrana: 300 mM equivalgono a circa 300 mOsm, quindi la soluzione è praticamente <b>isotonica</b> e il volume resta quasi stabile.`,
+            mix: `NaCl 0,9% è isotonico, ma l'urea aggiunta attraversa la membrana: entra con l'acqua e la cellula si gonfia.`
+          };
+          var s = T[st.sol] || '';
+          if (sim) s += sim.lysed ? ` <b>Risultato:</b> il volume raggiunge il limite della sfera (147 fL) e la cellula va in <b>emolisi</b> dopo ${f(sim.tLysis, 1)} s.` : ` <b>Risultato:</b> volume finale ${f(sim.Vfinal, 0)} fL (${sim.Vfinal >= 90 ? '+' : ''}${f((sim.Vfinal - 90) / 90 * 100, 0)}% rispetto a 90 fL).`;
+          if (st.aqp !== 'aqp') s += ` Le acquaporine sono ${st.aqp === 'hg' ? 'bloccate dal Hg²⁺' : 'assenti'}: l'acqua passa solo dai lipidi, quindi la cellula impiega molto più tempo ma il valore finale di equilibrio non cambia.`;
+          return { kind: sim && sim.lysed ? 'bad' : '', html: s };
+        },
+        experiments: [
+          { label: 'Isotonica (NaCl 0,9%)', run: function () { aSel.set('aqp'); sSel.set('iso'); }, why: `Nessun gradiente osmotico efficace: il volume non cambia.` },
+          { label: 'Acqua distillata', run: function () { aSel.set('aqp'); sSel.set('water'); }, why: `L'acqua entra fino a raggiungere il volume critico (~147 fL, la sfera con la stessa area): la membrana non si distende oltre e la cellula scoppia (<b>emolisi</b>).` },
+          { label: 'Ipertonica (NaCl 1,8%)', run: function () { aSel.set('aqp'); sSel.set('hyper'); }, why: `L'acqua esce e la cellula si rimpicciolisce e si raggrinzisce.` },
+          { label: 'Urea 300 mM', run: function () { aSel.set('aqp'); sSel.set('urea'); }, why: `Isosmotica ma NON isotonica: l'urea entra con l'acqua e la cellula va in emolisi. Ciò che conta è la tonicità, non l'osmolarità totale.` },
+          { label: 'Ipotonica senza acquaporine', run: function () { sSel.set('hypo'); aSel.set('hg'); }, why: `Senza acquaporine l'acqua passa solo attraverso i lipidi: la cellula si gonfia molto più lentamente, ma lo stato finale è lo stesso. Le AQP cambiano la <b>velocità</b>, non l'equilibrio.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
@@ -412,6 +529,29 @@
         cv.redraw();
       }
       upd();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { sC.set(150); sN.set(2); sS.set(1); sT.set(37); },
+        narrate: function () {
+          var f = F.fmt, osm = st.c * st.n, r = F.vantHoff(osm, st.T, st.sigma);
+          var s = `Il lato 2 contiene ${f(st.c, 0)} mM di un soluto che si dissocia in ${st.n === 1 ? '1 particella' : st.n + ' particelle'}: osmolarità <b>${f(osm, 0)} mOsm/L</b>. Il lato 1 è acqua. `;
+          if (st.sigma < 0.02) return s + `Con σ = 0 il soluto attraversa la membrana come l'acqua: non esercita alcuna pressione osmotica e i livelli restano uguali.`;
+          s += `L'acqua passa per <b>osmosi</b> dal lato 1 al lato 2 (verso la soluzione più concentrata) e fa salire il livello a destra. L'altezza smette di crescere quando la pressione idrostatica uguaglia la <b>pressione osmotica</b> π = σ·R·T·C = ${f(r.atm, 2)} atm (${f(r.mmHg, 0)} mmHg), cioè una colonna d'acqua di ${f(r.waterColumn_m, 1)} m: lì il flusso netto è zero. `;
+          if (st.sigma < 0.98) s += `Con σ = ${f(st.sigma, 2)} la membrana trattiene solo una parte del soluto e π si riduce in proporzione. `;
+          return s + `π dipende dal <b>numero di particelle</b> (NaCl conta il doppio del glucosio) e dalla temperatura.`;
+        },
+        experiments: [
+          { label: 'Glucosio 150 mM', run: function () { sC.set(150); sN.set(1); sS.set(1); sT.set(37); }, why: `150 mM di glucosio sono 150 mOsm: metà della pressione di una soluzione di NaCl con la stessa molarità.` },
+          { label: 'NaCl 150 mM', run: function () { sC.set(150); sN.set(2); sS.set(1); sT.set(37); }, why: `NaCl si dissocia in due particelle: 150 mM valgono 300 mOsm, cioè la pressione osmotica del plasma (≈ 7,6 atm a 37 °C).` },
+          { label: 'Soluto permeante (σ = 0)', run: function () { sC.set(150); sN.set(2); sS.set(0); sT.set(37); }, why: `Se il soluto passa liberamente la membrana non lo «vede»: nessuna pressione osmotica, come l'urea per l'eritrocita.` },
+          { label: '1 Osm a 0 °C (valore della slide)', run: function () { sC.set(1000); sN.set(1); sS.set(1); sT.set(0); }, why: `A 0 °C una soluzione 1 Osm dà 22,4 atm, il valore riportato nelle slide.` },
+          { label: '1 Osm a 37 °C', run: function () { sC.set(1000); sN.set(1); sS.set(1); sT.set(37); }, why: `Alla temperatura corporea la stessa soluzione dà <b>25,4 atm</b>: la pressione osmotica è proporzionale alla temperatura assoluta.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });

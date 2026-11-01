@@ -182,6 +182,11 @@ test('Sinapsi: accoppiamento elettrico e blocco del Mg²⁺ (NMDA)', () => {
   const g = F.gapPair({ gc: 5, I: t => (t > 5 && t < 45 ? 100 : 0), tmax: 60 });
   const k = (g.V2[Math.floor(g.V2.length * 0.7)] + 65) / (g.V1[Math.floor(g.V1.length * 0.7)] + 65);
   near(k, g.kTheory, 0.02, 'coefficiente di accoppiamento');
+  // giunzione rettificante: passa bene da 1 a 2, poco da 2 a 1
+  const kk = r => (Math.max(...r.V2) + 65) / (Math.max(...r.V1) + 65);
+  const f12 = F.gapPair({ gc: 5, rectify: true, inject: 1, I: t => (t > 5 && t < 45 ? 100 : 0), tmax: 60 });
+  const f21 = F.gapPair({ gc: 5, rectify: true, inject: 2, I: t => (t > 5 && t < 45 ? 100 : 0), tmax: 60 });
+  assert.ok(kk(f12) > 3 * (Math.max(...f21.V1) + 65) / (Math.max(...f21.V2) + 65), 'rettificazione: 1→2 molto meglio di 2→1');
   assert.ok(F.nmdaBlock(-80, 1) < 0.1 && F.nmdaBlock(0, 1) > 0.7, 'blocco voltaggio-dipendente');
   const ps = F.pspCell({ syns: [{ g: 2, E: 0, t0: 10, tau: 2 }] });
   between(Math.max(...ps.V) + 65, 1, 10, 'PPSE < 10 mV');

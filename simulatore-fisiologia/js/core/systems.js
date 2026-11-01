@@ -184,7 +184,7 @@
     for (var t = 0, k = 0; t <= tmax; t += dt, k++) {
       var I1 = o.inject === 2 ? 0 : o.I(t), I2 = o.inject === 2 ? o.I(t) : 0;
       var g = gc;
-      if (o.rectify && (V1 - V2) * (o.inject === 2 ? -1 : 1) < 0) g = gc * 0.1;
+      if (o.rectify && V2 > V1) g = gc * 0.1; // rettificante: la corrente passa bene da 1 a 2, poco da 2 a 1
       var Ig = g * (V1 - V2);
       if (k % 2 === 0) { out.t.push(t); out.V1.push(V1); out.V2.push(V2); }
       V1 += dt * (-gL * (V1 + 65) - Ig + I1) / C;

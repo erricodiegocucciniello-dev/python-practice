@@ -17,7 +17,7 @@
     section: 'elettro',
     short: 'Le correnti locali depolarizzano la membrana vicina; la refrattarietà impedisce il ritorno; la mielina fa "saltare" il PdA da un nodo di Ranvier all\'altro.',
     mount: function (host, P) {
-      var L = U.simLayout(host), st = { type: P.type || 'myel', d: P.d || 10, T: 18.5, demy: P.demy || 0, stim: P.stim || 'left', speed: 1, running: false };
+      var L = U.simLayout(host), st = { type: P.type || 'myel', d: P.d || 10, T: 18.5, demy: P.demy || 0, stim: P.stim || 'left', speed: 1, running: false, done: false };
       var tSel = U.seg({ label: 'Fibra', value: st.type, options: [['unmy', 'Amielinica'], ['myel', 'Mielinica']], onChange: function (v) { st.type = v; build(); } });
       var sD = U.slider({ label: 'Diametro dell\'assone', min: 1, max: 20, step: 0.5, value: st.d, digits: 1, unit: 'µm', onInput: function (v) { st.d = v; } });
       sD.input.addEventListener('change', function () { build(); });
@@ -37,7 +37,7 @@
       var pT = U.plot(L.main, { title: 'Vm registrato da due elettrodi', xlabel: 'tempo (ms)', ylabel: 'Vm (mV)', height: 180, ylim: [-90, 50] });
       var THREE = G.THREE, cable, meshes = [], tmpC = THREE ? new THREE.Color() : null, rec = { t: [], a: [], b: [] }, e1, e2, cross = [null, null], vel = null;
       function build() {
-        st.running = false;
+        st.running = false; st.done = false;
         var nI = 16;
         if (st.type === 'unmy') {
           var v0 = 18.8 * Math.sqrt(st.d / 476) * Math.pow(3, (st.T - 18.5) / 20); // stima per scegliere la lunghezza
@@ -91,7 +91,7 @@
         draw();
       }
       function start() {
-        cable.reset(-65); rec = { t: [], a: [], b: [] }; cross = [null, null]; vel = null; st.running = true;
+        cable.reset(-65); rec = { t: [], a: [], b: [] }; cross = [null, null]; vel = null; st.running = true; st.done = false;
         var n = cable.n, amp = function (i) { return 2000 * cable.area[i] * (st.type === 'myel' ? 50 : 1); };
         st.stimIdx = st.stim === 'left' ? [0] : (st.stim === 'mid' ? [Math.floor(n / 2) - (cable.kind[Math.floor(n / 2)] === 'node' ? 0 : 0)] : [0, n - 1]);
         if (st.type === 'myel' && st.stim === 'mid') { var best = 0, mid = n / 2; cable.kind.forEach(function (k, i) { if (k === 'node' && Math.abs(i - mid) < Math.abs(best - mid)) best = i; }); st.stimIdx = [best]; }
@@ -110,7 +110,10 @@
           rec.t.push(cable.t); rec.a.push(cable.V[e1]); rec.b.push(cable.V[e2]);
           if (cross[0] !== null && cross[1] !== null && vel === null && st.stim === 'left') vel = (cable.x[e2] - cable.x[e1]) / (cross[1] - cross[0]) * 10;
           ro.set('t', F.fmt(cable.t, 2)); ro.set('v', vel ? F.fmt(vel, 2) + ' m/s' : (st.stim === 'left' ? 'in misura…' : 'stimola da sinistra per misurarla'));
-          if (cable.t > (st.type === 'myel' ? 3 : 14)) st.running = false;
+          if (cable.t > (st.type === 'myel' ? 3 : 14)) {
+            st.running = false; st.done = true;
+            if (!vel && st.stim === 'left') ro.set('v', '<span style="color:var(--bad)">nessuna: il PdA non è arrivato al secondo elettrodo (conduzione bloccata)</span>');
+          }
           draw();
         }
         if (scn) meshes.forEach(function (m) { if (m.userData.i !== undefined && !m.userData.myelin) vColor(cable.V[m.userData.i], m.material.color); });
@@ -130,6 +133,36 @@
       build();
       var loop = null;
       if (scn) scn.onFrame(frame); else loop = U.loop(L.main, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var prGo = function (o) { tSel.set(o.type); sD.set(o.d || 10); tDem.set(o.demy || 0); stSel.set(o.stim || 'left'); build(); start(); };
+      U.explainer(L, {
+        poll: 500,
+        legend: [['#d94a3d', 'rosso: membrana depolarizzata (PdA attivo)'], ['#7fa0c9', 'blu/grigio: membrana a riposo o refrattaria'], ['#f2efe6', 'bianco: guaina di mielina']],
+        narrate: function () {
+          var f = F.fmt, s;
+          if (st.type === 'unmy') s = `Fibra <b>amielinica</b> (${f(st.d, 0)} µm). La zona attiva è depolarizzata: le <b>correnti locali</b> (elettrotoniche) scorrono dentro l'assone e depolarizzano la zona vicina fino alla soglia; lì si aprono i canali Na⁺ e il processo si ripete lungo tutta la fibra. Dietro il fronte la membrana è <b>refrattaria</b> (canali inattivati): per questo il PdA non torna indietro. La velocità cresce con la radice del diametro (v ∝ √d).`;
+          else s = `Fibra <b>mielinica</b> (${f(st.d, 0)} µm). I manicotti bianchi di mielina isolano gli internodi: la corrente locale scorre nell'assone quasi senza disperdersi e depolarizza il nodo di Ranvier successivo. Solo nei <b>nodi</b> ci sono molti canali Na⁺ (i punti nel grafico), quindi il PdA «salta» di nodo in nodo: <b>conduzione saltatoria</b>, molto più veloce e meno costosa in ATP. Qui la velocità cresce in proporzione al diametro (v ∝ d).`;
+          if (vel) s += ` Velocità misurata: <b>${f(vel, 1)} m/s</b>.`;
+          if (st.type === 'myel' && st.demy > 0.05) s += ` Nei 3 internodi demielinizzati (rosa) la capacità aumenta e la corrente si <b>disperde</b>: ${st.demy < 0.5 ? 'il PdA rallenta' : 'il PdA rallenta molto e può bloccarsi se la corrente che arriva al nodo successivo non raggiunge la soglia'}. È ciò che accade nella sclerosi multipla.`;
+          if (st.stim === 'both') s += ` Stimolando le due estremità, i due PdA si incontrano e si <b>annullano</b>, perché ciascuno trova davanti la membrana refrattaria lasciata dall'altro.`;
+          else if (st.stim === 'mid') s += ` Stimolando al centro il PdA parte nei due versi: la propagazione è bidirezionale se si parte da un punto qualsiasi; nell'organismo è unidirezionale perché parte dal soma.`;
+          if (st.done && !vel && st.stim === 'left') s += ` <b>Il PdA non è arrivato al secondo elettrodo: conduzione bloccata.</b> Gli internodi senza mielina disperdono troppa corrente e il nodo successivo non raggiunge la soglia.`;
+          else if (!st.running && !st.done) s += ' Premi «Stimola».';
+          return s;
+        },
+        experiments: [
+          { label: 'Fibra mielinica (10 µm)', run: function () { prGo({ type: 'myel' }); }, why: `Il PdA salta da un nodo al successivo: guarda il grafico in alto, dove i punti si attivano uno dopo l'altro. Velocità dell'ordine di 40 m/s.` },
+          { label: 'Fibra amielinica (10 µm)', run: function () { prGo({ type: 'unmy' }); }, why: `Il PdA si propaga in modo continuo, molto più lento (circa 3 m/s): confronta la velocità misurata con la prova precedente.` },
+          { label: 'Mielinica sottile (2 µm)', run: function () { prGo({ type: 'myel', d: 2 }); }, why: `Nelle fibre mieliniche la velocità è proporzionale al diametro: una fibra 5 volte più sottile è circa 5 volte più lenta.` },
+          { label: 'Demielinizzazione parziale (40%)', run: function () { prGo({ type: 'myel', demy: 0.4 }); }, why: `Nei tre internodi danneggiati la corrente si disperde: il PdA rallenta, ma arriva.` },
+          { label: 'Demielinizzazione grave (100%)', run: function () { prGo({ type: 'myel', demy: 1 }); }, why: `La perdita di mielina è tale che la corrente non basta più a raggiungere la soglia al nodo successivo: il PdA si <b>blocca</b>. È il meccanismo dei sintomi della sclerosi multipla.` },
+          { label: 'Stimolo da entrambe le estremità', run: function () { prGo({ type: 'unmy', stim: 'both' }); }, why: `I due PdA si annullano nel punto d'incontro: dietro ciascuno la membrana è refrattaria, quindi non c'è nulla da eccitare.` },
+          { label: 'Stimolo al centro', run: function () { prGo({ type: 'unmy', stim: 'mid' }); }, why: `Il PdA parte nei due versi: la membrana è eccitabile in entrambe le direzioni; ciò che lo rende unidirezionale nel corpo è il punto d'origine.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { pX.dispose(); pT.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
@@ -171,6 +204,27 @@
       }
       run();
       U.texify(L.controls);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var cvBase = function () { sD.set(2); sRm.set(20000); sRi.set(150); };
+      U.explainer(L, {
+        watch: ro,
+        base: cvBase,
+        legend: [['--c1', 'in alto: ampiezza a regime lungo il cavo'], ['--ok', 'verde: λ (il potenziale è sceso al 37%)']],
+        narrate: function () {
+          var f = F.fmt, lam = Math.sqrt(st.Rm * st.d * 1e-4 / (4 * st.Ri)) * 1e4, tau = st.Rm * 1e-3;
+          return `Un potenziale locale (come un PPSE) non si propaga in modo attivo: si <b>diffonde passivamente</b> lungo il dendrite, come l'acqua in un tubo bucato. La corrente può scorrere lungo l'asse (resistenza del citoplasma R<sub>i</sub>) o <b>disperdersi</b> attraverso la membrana (R<sub>m</sub>): più la membrana isola rispetto al citoplasma, più il segnale arriva lontano. L'attenuazione è esponenziale: V = V₀·e<sup>−x/λ</sup> con λ = <b>${f(lam, 0)} µm</b>: a una distanza λ il potenziale è sceso al 37%. In più il segnale si <b>allunga nel tempo</b> (τ = ${f(tau, 0)} ms): nel grafico in basso i punti più lontani rispondono più lentamente e in piccolo. Per questo i PPS sono locali e graduati.`;
+        },
+        experiments: [
+          { label: 'Dendrite standard (2 µm)', run: function () { cvBase(); }, why: `λ ≈ 0,8 mm: un PPSE a 1 mm dal soma arriva con circa il 30% dell'ampiezza.` },
+          { label: 'Dendrite sottile (0,5 µm)', run: function () { cvBase(); sD.set(0.5); }, why: `λ ∝ √d: un dendrite più sottile ha più resistenza assiale e il segnale si spegne più presto.` },
+          { label: 'Dendrite spesso (10 µm)', run: function () { cvBase(); sD.set(10); }, why: `Con un diametro maggiore λ cresce (circa √5 volte) e il segnale arriva più lontano.` },
+          { label: 'Membrana con perdite (R_m = 2 kΩ·cm²)', run: function () { cvBase(); sRm.set(2000); }, why: `Con più canali aperti la corrente si perde subito attraverso la membrana: λ e τ si riducono entrambe (τ = R<sub>m</sub>C<sub>m</sub>).` },
+          { label: 'Citoplasma più resistivo', run: function () { cvBase(); sRi.set(300); }, why: `Con R<sub>i</sub> maggiore la corrente fatica a scorrere lungo l'asse: λ diminuisce.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { p1.dispose(); p2.dispose(); } };
     }
   });

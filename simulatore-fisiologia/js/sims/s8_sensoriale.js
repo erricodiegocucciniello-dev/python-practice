@@ -94,6 +94,41 @@
         stepFn();
       }
       vis(); run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var mcBase = function () { sSel.set('press'); sA.set(50); sF.set(40); tD.set(false); };
+      U.explainer(L, {
+        watch: ro,
+        base: mcBase,
+        legend: [['--c1', 'Merkel (SA I)'], ['--c3', 'Meissner (RA I)'], ['--na', 'Pacini (RA II)'], ['--c4', 'Ruffini (SA II)'], ['--warn', 'fascia chiara: durata dello stimolo']],
+        narrate: function () {
+          var f = F.fmt, sn = ro.snapshot(), keys = Object.keys(REC), s;
+          var elenco = keys.map(function (k, i) { return '<b>' + REC[k].name.split(' (')[0] + '</b>: ' + sn[i].value; }).join(' · ');
+          if (st.stim === 'press') {
+            s = `Pressione mantenuta di <b>${f(st.A, st.A < 1 ? 2 : 0)} µm</b> sulla pelle, da 100 a 600 ms (grafico in alto). I recettori <b>ad adattamento lento</b> (Merkel, Ruffini) continuano a scaricare finché la pressione dura: dicono <b>quanto</b> e <b>per quanto</b> si preme. I recettori <b>ad adattamento rapido</b> (Meissner, Pacini) scaricano solo quando lo stimolo cambia, cioè all'inizio e alla fine: segnalano la <b>variazione</b>, non il valore costante. Ora: ${elenco}.`;
+            if (st.decaps) s += ` <b>Senza capsula</b> il Pacini non si comporta più da recettore rapido: è la capsula lamellare a filtrare via la pressione costante e a lasciar passare solo i cambiamenti rapidi (Loewenstein e Mendelson, 1965).`;
+          } else {
+            s = `Vibrazione a <b>${f(st.f, 0)} Hz</b> con ampiezza ${f(st.A, st.A < 1 ? 2 : 0)} µm. La soglia di ogni recettore dipende dalla frequenza: la sua <b>frequenza preferita</b> è quella a cui la soglia è più bassa (Meissner circa 40 Hz, Pacini circa 250 Hz); Merkel e Ruffini rispondono soprattutto alle deformazioni lente e seguono poco le vibrazioni rapide. Ora: ${elenco}. `;
+            var attivi = keys.filter(function (k) { return (rates[k] || 0) > 0; });
+            s += attivi.length === 0 ? `A questa ampiezza <b>nessun recettore</b> raggiunge la soglia. ` : (attivi.length === 1 ? `Scarica soltanto il <b>${REC[attivi[0]].name.split(' (')[0]}</b>. ` : `Rispondono più recettori insieme: la selettività per la frequenza si vede soprattutto avvicinandosi alla soglia (riduci l'ampiezza). `);
+            if (st.decaps) s += `Il Pacini è privato della capsula, quindi ha perso la selettività per le alte frequenze. `;
+            s += `Per vedere la soglia di ogni recettore a tutte le frequenze usa «Calcola le curve di soglia».`;
+          }
+          return s;
+        },
+        experiments: [
+          { label: 'Pressione mantenuta', run: function () { mcBase(); }, why: `Merkel e Ruffini scaricano per tutto il tempo; Meissner e Pacini scaricano pochissimo, solo ai bordi dello stimolo.` },
+          { label: 'Pressione sotto soglia (3 µm)', run: function () { mcBase(); sA.set(3); }, why: `Sotto una indentazione minima nessun recettore scarica: lo stimolo non viene percepito.` },
+          { label: 'Pressione forte (250 µm)', run: function () { mcBase(); sA.set(250); }, why: `Una pressione più forte fa scaricare di più i recettori lenti: più indentazione = più PdA al secondo (l'intensità è codificata dalla frequenza di scarica).` },
+          { label: 'Vibrazione molto lenta (5 Hz, 60 µm)', run: function () { mcBase(); sSel.set('vib'); sF.set(5); sA.set(60); }, why: `Una vibrazione molto lenta è quasi una pressione che varia piano: rispondono i recettori lenti (Merkel e Ruffini), mentre quelli rapidi non scaricano.` },
+          { label: 'Vibrazione lenta (10 Hz, 40 µm)', run: function () { mcBase(); sSel.set('vib'); sF.set(10); sA.set(40); }, why: `A 10 Hz scaricano Meissner e Merkel (tocco lento, «flutter») mentre il Pacini ha ancora una soglia troppo alta e resta silente.` },
+          { label: 'Vibrazione rapida (250 Hz, 1 µm)', run: function () { mcBase(); sSel.set('vib'); sF.set(250); sA.set(1); }, why: `Con appena 1 µm, a 250 Hz scarica solo il Pacini, un PdA per ogni ciclo: la capsula lamellare lascia passare le oscillazioni rapide e il recettore ha qui la soglia più bassa (sotto 1 µm).` },
+          { label: 'Pacini senza capsula + pressione', run: function () { mcBase(); tD.set(true); }, why: `Tolta la capsula il Pacini scarica per tutta la pressione, come un recettore lento: l'adattamento rapido è una proprietà della capsula, non del terminale nervoso.` },
+          { label: 'Curve di soglia', run: function () { mcBase(); tuning(); }, why: `Il grafico in fondo mostra, per ogni recettore, l'ampiezza minima che lo fa scaricare in funzione della frequenza: ognuno ha il minimo a una frequenza diversa (Meissner circa 40 Hz, Pacini circa 250 Hz), per questo insieme coprono un ampio intervallo di vibrazioni. Il Merkel ha soglie quasi costanti: risponde meglio alle deformazioni lente.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { pS.dispose(); pR.dispose(); pT.dispose(); cv.dispose(); } };
     }
   });
@@ -124,6 +159,32 @@
         ro.set('w', F.fmt(w, 1) + ' mm'); ro.set('t', F.fmt(F.twoPointThreshold(w, st.inhib), 1) + ' mm');
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var dpBase = function () { rSel.set('dito'); sD.set(3); tI.set(true); };
+      U.explainer(L, {
+        watch: ro,
+        base: dpBase,
+        legend: [['--c1', 'blu: attività dei recettori (con inibizione laterale)'], ['--faint', 'tratteggio: senza inibizione'], ['--na', 'linee arancio: posizione delle punte']],
+        narrate: function () {
+          var f = F.fmt, w = regions[st.reg][1] / k1, pr = F.twoPointProfile(st.d, w, st.inhib);
+          var tYes = F.twoPointThreshold(w, true), tNo = F.twoPointThreshold(w, false), thr = st.inhib ? tYes : tNo;
+          var s = `Appoggio due punte a <b>${f(st.d, 1)} mm</b> di distanza sul «${regions[st.reg][0].toLowerCase()}». Ogni recettore risponde a una piccola area di cute (il suo <b>campo recettivo</b>), qui larga circa ${f(w, 1)} mm. Se le due punte stimolano campi che si sovrappongono, l'attività dei recettori forma un <b>unico picco</b> e il cervello sente un punto solo. Le punte sono percepite come due solo se tra i due picchi di attività c'è un avvallamento (almeno il 10%). `;
+          s += pr.two ? `Qui l'avvallamento c'è (distanza maggiore della soglia di ${f(thr, 1)} mm): <b>due punti</b>. ` : `Qui i due picchi si fondono (distanza minore della soglia di ${f(thr, 1)} mm): <b>un punto solo</b>. `;
+          s += st.inhib ? `L'<b>inibizione laterale</b> sopprime l'attività ai lati dei picchi e li rende più stretti: la soglia scende da ${f(tNo, 1)} a ${f(tYes, 1)} mm (il tratteggio mostra il profilo senza inibizione).` : `Senza inibizione laterale i picchi sono più larghi e si fondono prima: la soglia è ${f(tNo, 1)} mm invece di ${f(tYes, 1)}.`;
+          return { kind: pr.two ? 'ok' : '', html: s };
+        },
+        experiments: [
+          { label: 'Polpastrello, 3 mm', run: function () { dpBase(); }, why: `Nel polpastrello i campi sono piccolissimi e molto fitti: due punte a 3 mm danno due picchi separati.` },
+          { label: 'Polpastrello, 1 mm', run: function () { dpBase(); sD.set(1); }, why: `A 1 mm le punte cadono nello stesso campo: un picco solo e quindi un punto solo, anche sulla zona più sensibile.` },
+          { label: 'Avambraccio, 10 mm', run: function () { dpBase(); rSel.set('avambraccio'); sD.set(10); }, why: `La stessa distanza che sul polpastrello è enorme, sull'avambraccio (campi grandi, recettori più radi) è sotto soglia: si sente un punto solo.` },
+          { label: 'Avambraccio, 50 mm', run: function () { dpBase(); rSel.set('avambraccio'); sD.set(50); }, why: `Per sentire due punte sull'avambraccio servono punte molto più lontane, oltre la soglia di circa 38 mm.` },
+          { label: 'Polpastrello, 2,7 mm con inibizione', run: function () { dpBase(); sD.set(2.7); }, why: `Vicino alla soglia (2,5 mm) i due picchi si distinguono appena.` },
+          { label: 'Polpastrello, 2,7 mm senza inibizione', base: function () { dpBase(); sD.set(2.7); }, run: function () { dpBase(); sD.set(2.7); tI.set(false); }, why: `Senza inibizione laterale i picchi sono più larghi e si fondono: la soglia sale da 2,5 a 2,8 mm e la stessa distanza ora è percepita come un punto solo. L'inibizione laterale affina quindi la discriminazione.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); } };
     }
   });

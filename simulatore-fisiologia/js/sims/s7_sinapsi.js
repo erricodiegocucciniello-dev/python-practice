@@ -50,6 +50,32 @@
         }
       }
       vis(); run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var ecBase = function () { tSel.set('el'); fSel.set(1); sGc.set(5); tR.set(false); sCE.set(0); sCG.set(6); };
+      U.explainer(L, {
+        watch: ro,
+        base: ecBase,
+        legend: [['--c1', 'cellula 1 (presinaptica o stimolata)'], ['--na', 'cellula 2 (postsinaptica)']],
+        narrate: function () {
+          var f = F.fmt, sn = ro.snapshot();
+          if (st.type === 'el') return `Le due cellule sono unite da <b>giunzioni comunicanti</b> (connessoni): canali che collegano direttamente i due citoplasmi. Inietto corrente nella cellula ${st.from}: una parte passa attraverso la giunzione (g<sub>c</sub> = ${f(st.gc, 1)} nS) e depolarizza anche l'altra cellula. Il rapporto tra le due risposte è il <b>coefficiente di accoppiamento</b>, k = ${sn[0].value}. Non c'è nessun trasmettitore e nessun ritardo misurabile: passa la corrente stessa. ${st.rect ? `La giunzione è <b>rettificante</b>: conduce bene in un verso e poco nell'altro.` : `La trasmissione è <b>bidirezionale</b>.`} Il segnale arriva sempre <b>attenuato</b> (k &lt; 1) e con lo stesso segno.${st.gc < 1 ? ' Con la giunzione quasi chiusa le due cellule sono praticamente isolate.' : ''}`;
+          if (st.from === 2) return `Sinapsi <b>chimica</b>: stimolo la cellula 2, ma la cellula 1 non risponde. La trasmissione chimica è <b>unidirezionale</b>: il trasmettitore è liberato solo dal terminale presinaptico e agisce solo sui recettori postsinaptici.`;
+          return `Sinapsi <b>chimica</b>: il PdA presinaptico (blu) apre i canali Ca²⁺ e fa liberare il trasmettitore. Dopo un <b>ritardo sinaptico</b> di circa 0,5 ms il trasmettitore attiva i recettori postsinaptici, il cui potenziale di inversione è ${st.chemE === 0 ? '0 mV (eccitatori)' : '−75 mV (inibitori)'}. Risposta postsinaptica: ${sn[0].value}. ${st.chemE === 0 ? 'È un PPSE: depolarizza la cellula verso la soglia.' : 'È un PPSI: iperpolarizza la cellula e la allontana dalla soglia.'} Un PdA di 100 mV produce una risposta di pochi mV, che può essere resa più grande o più piccola cambiando l'efficacia della sinapsi: la sinapsi chimica può <b>amplificare, attenuare o invertire</b> il segnale.`;
+        },
+        experiments: [
+          { label: 'Sinapsi elettrica', run: function () { ecBase(); }, why: `Corrente che passa direttamente da una cellula all'altra: la risposta della cellula 2 è una copia più piccola e più lenta di quella della cellula 1.` },
+          { label: 'Giunzione forte (20 nS)', run: function () { ecBase(); sGc.set(20); }, why: `Più connessoni aperti = più corrente passa: il coefficiente di accoppiamento si avvicina a 1 e le due cellule si comportano quasi come una sola.` },
+          { label: 'Giunzione quasi chiusa (0,5 nS)', run: function () { ecBase(); sGc.set(0.5); }, why: `Con pochissima corrente trasferita la cellula 2 quasi non risponde: la chiusura delle giunzioni (acidificazione, Ca²⁺) isola le cellule danneggiate.` },
+          { label: 'Rettificante: stimolo dalla cellula 1', run: function () { ecBase(); tR.set(true); }, why: `Nella giunzione rettificante la corrente passa bene da 1 a 2: l'accoppiamento è quello normale.` },
+          { label: 'Rettificante: stimolo dalla cellula 2', run: function () { ecBase(); tR.set(true); fSel.set(2); }, why: `Nel verso opposto (da 2 a 1) la giunzione conduce solo il 10%: la cellula 1 quasi non risponde. Le sinapsi elettriche non sono sempre simmetriche.` },
+          { label: 'Chimica eccitatoria', run: function () { ecBase(); tSel.set('ch'); }, why: `Si vede il <b>ritardo sinaptico</b> tra il picco presinaptico e l'inizio della risposta, e la risposta è una depolarizzazione lenta.` },
+          { label: 'Chimica inibitoria', run: function () { ecBase(); tSel.set('ch'); sCE.set(-75); }, why: `Lo stesso PdA presinaptico produce un'iperpolarizzazione: il segno dipende dal recettore (potenziale di inversione), non dal PdA.` },
+          { label: 'Chimica: stimolo dalla cellula 2', run: function () { ecBase(); tSel.set('ch'); fSel.set(2); }, why: `La cellula 1 non risponde: la sinapsi chimica è <b>unidirezionale</b>, a differenza di quella elettrica.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); } };
     }
   });
@@ -193,6 +219,23 @@
       reset();
       var loop = null;
       if (scn) scn.onFrame(frame); else loop = U.loop(L.main, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var syBase = function () { tCa.set(false); tLo.set(false); tBx.set(false); tNe.set(false); nSel.set('ach'); };
+      U.explainer(L, {
+        legend: [['#7cc36b', 'pallini colorati: trasmettitore (verde ACh, arancio glutammato, azzurro GABA)'], ['#ffd84a', 'pallini gialli: ioni Ca²⁺'], ['#8e6cc4', 'viola: recettori postsinaptici (verdi quando sono attivi)']],
+        experiments: [
+          { label: 'Sinapsi normale', run: function () { syBase(); fire(); }, why: `La barra di stato sotto la scena descrive ogni fase: PdA → ingresso di Ca²⁺ → fusione delle vescicole (SNARE e sinaptotagmina) → diffusione del trasmettitore (pochi µs) → recettori attivati → PPSE nel grafico → rimozione del trasmettitore.` },
+          { label: 'Canali Ca²⁺ bloccati', run: function () { syBase(); tCa.set(true); fire(); }, why: `Senza ingresso di Ca²⁺ le vescicole non si fondono e non c'è rilascio: il Ca²⁺ è il segnale che collega l'evento elettrico a quello chimico.` },
+          { label: 'Poco Ca²⁺ fuori', run: function () { syBase(); tLo.set(true); fire(); }, why: `Con meno Ca²⁺ si fonde una sola vescicola invece di quattro: la risposta postsinaptica è più piccola. È la base dell'esperimento sui quanti (lezione 25).` },
+          { label: 'Tossina botulinica', run: function () { syBase(); tBx.set(true); fire(); }, why: `La tossina taglia SNAP-25: il complesso SNARE non può chiudersi, le vescicole non si fondono e la placca non trasmette (paralisi flaccida).` },
+          { label: 'Neostigmina', run: function () { syBase(); tNe.set(true); fire(); }, why: `Con l'acetilcolinesterasi inibita l'ACh resta nella fessura più a lungo: i recettori restano attivi e la risposta è più prolungata.` },
+          { label: 'Glutammato', run: function () { syBase(); nSel.set('glu'); fire(); }, why: `Il glutammato non ha un enzima di degradazione nella fessura: viene ricaptato dai trasportatori EAAT, nel terminale e nella glia.` },
+          { label: 'GABA (inibitorio)', run: function () { syBase(); nSel.set('gaba'); fire(); }, why: `Il GABA attiva canali per il Cl⁻: la risposta è un'iperpolarizzazione (PPSI), non una depolarizzazione.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
@@ -241,6 +284,40 @@
         ro.set('k', Math.abs(E + 65) < 4 ? 'inibizione "di shunt" (E ≈ riposo): nessuna variazione visibile, ma la cellula diventa meno eccitabile' : (excit ? 'eccitatorio: porta la cellula verso la soglia (≈ −50 mV)' : 'inibitorio: allontana dalla soglia'));
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var ppBase = function () { rSel.set('ampa'); sV.set(-60); sG.set(3); sCl.set(7); tF.set(false); };
+      U.explainer(L, {
+        watch: ro,
+        base: ppBase,
+        legend: [['--ok', 'verde: potenziale di inversione del recettore'], ['--muted', 'grigio: potenziale di riposo']],
+        narrate: function () {
+          var f = F.fmt, E = Erev(), sn = ro.snapshot();
+          var rname = { ampa: 'AMPA / nicotinico (canale cationico)', gabaa: 'GABA-A (canale per il Cl⁻)', gly: 'della glicina (canale per il Cl⁻)', gabab: 'GABA-B (apre canali K⁺ tramite proteine G)', nmda: 'NMDA (canale cationico bloccato dal Mg²⁺)' }[st.rec];
+          var s = `Il recettore ${rname} lascia passare ioni che spingono il potenziale della cellula verso il suo <b>potenziale di inversione</b>, E<sub>rev</sub> = <b>${f(E, 0)} mV</b>. `;
+          if (Math.abs(st.Vh - E) < 2) s += `La cellula è già a ${f(st.Vh, 0)} mV, cioè a E<sub>rev</sub>: non c'è forza motrice e quindi <b>nessuna risposta</b>. `;
+          else s += `La cellula parte da ${f(st.Vh, 0)} mV: all'apertura il potenziale si sposta <b>verso ${f(E, 0)} mV</b> (risposta ${sn[1].value}). ${st.Vh > E ? 'Poiché la cellula è <b>sopra</b> E<sub>rev</sub> la corrente è uscente e la risposta è <b>invertita</b>. ' : 'Se la cellula fosse sopra E<sub>rev</sub> la risposta sarebbe invertita. '}`;
+          if (E > -50) s += `Poiché E<sub>rev</sub> è sopra la soglia di scarica (circa −50 mV) la sinapsi è <b>eccitatoria</b>. `;
+          else if (Math.abs(E + 65) < 4) s += `Poiché E<sub>rev</sub> è vicino al potenziale di riposo la risposta è quasi invisibile, ma la conduttanza aggiunta «cortocircuita» i PPSE: <b>inibizione di shunt</b>. `;
+          else s += `Poiché E<sub>rev</sub> è sotto la soglia la sinapsi è <b>inibitoria</b>. `;
+          if ((st.rec === 'gabaa' || st.rec === 'gly') && E > -55) s += `Con Cl⁻ interno alto (${f(st.Cli, 0)} mM) E<sub>Cl</sub> è meno negativo e il GABA può <b>depolarizzare</b>, come nei neuroni immaturi. `;
+          if (st.rec === 'nmda' && st.Vh < -40) s += `A questo potenziale il Mg²⁺ occlude in parte il poro: la risposta è piccola e cresce se la cellula è già depolarizzata. `;
+          s += `Conta il recettore, non il trasmettitore: lo stesso trasmettitore può eccitare o inibire.`;
+          if (st.fam) s += ` Le tre tracce (partenza a −60, −20 e +10 mV) mostrano l'inversione del segno.`;
+          return s;
+        },
+        experiments: [
+          { label: 'Eccitatorio (AMPA) a −60 mV', run: function () { ppBase(); }, why: `E<sub>rev</sub> ≈ 0 mV: il canale cationico depolarizza la cellula verso 0 mV (un PPSE).` },
+          { label: 'Inversione: −60, −20, +10 mV', run: function () { ppBase(); tF.set(true); }, why: `A −60 mV il PPS è depolarizzante, a −20 mV è più piccolo, a +10 mV (sopra E<sub>rev</sub>) è <b>invertito</b>: l'esperimento classico della lezione.` },
+          { label: 'GABA-A inibitorio', run: function () { ppBase(); rSel.set('gabaa'); sV.set(-50); }, why: `Il Cl⁻ spinge Vm verso E<sub>Cl</sub> ≈ −76 mV: iperpolarizzazione (PPSI) che allontana dalla soglia.` },
+          { label: 'GABA depolarizzante (Cl⁻ interno 30 mM)', run: function () { ppBase(); rSel.set('gabaa'); sCl.set(30); sV.set(-65); }, why: `Con Cl⁻ interno alto E<sub>Cl</sub> si sposta verso −37 mV: sopra il potenziale di riposo, quindi il GABA <b>depolarizza</b> (neuroni immaturi, per via di NKCC1).` },
+          { label: 'Inibizione di shunt', run: function () { ppBase(); rSel.set('gabaa'); sCl.set(10); sV.set(-65); }, why: `E<sub>Cl</sub> è quasi uguale al riposo: nessuna variazione visibile di Vm, ma la conduttanza al Cl⁻ aumenta e riduce l'effetto degli ingressi eccitatori.` },
+          { label: 'GABA-B (K⁺, lento)', run: function () { ppBase(); rSel.set('gabab'); sV.set(-60); }, why: `Il recettore metabotropo apre canali K⁺ tramite proteine G: risposta molto più lenta (decine di ms) e iperpolarizzante.` },
+          { label: 'NMDA', run: function () { ppBase(); rSel.set('nmda'); sV.set(-60); }, why: `A −60 mV il Mg²⁺ occlude il poro e la risposta è piccola; se la cellula è già depolarizzata il blocco si toglie e la risposta cresce.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); piv.dispose(); } };
     }
   });

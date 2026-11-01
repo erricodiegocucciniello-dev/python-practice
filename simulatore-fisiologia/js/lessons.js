@@ -524,7 +524,7 @@
         { id: 'currentclamp', preset: { R: 100, C: 100, I: 0.1 },
           predict: { q: "Raddoppiando la capacità della membrana (cellula più grande, stessa R), la risposta allo stesso gradino…", options: ["diventa più ampia", "raggiunge lo stesso valore finale ma più lentamente", "diventa più veloce"], answer: 1, why: "Il valore finale è I·R (non dipende da C); τ = RC raddoppia." },
           observe: "attiva la famiglia di gradini: le risposte iper- e depolarizzanti sono simmetriche finché la membrana è passiva." },
-        { id: 'currentclamp', title: 'Quando la membrana è eccitabile', preset: { exc: true, I: 0.2, C: 100 },
+        { id: 'currentclamp', title: 'Quando la membrana è eccitabile', preset: { exc: true, I: 0.4, C: 100 },
           observe: "con i canali di Hodgkin-Huxley un gradino abbastanza grande genera potenziali d'azione: la membrana non è più un semplice RC." }
       ],
       quiz: [
@@ -972,7 +972,7 @@
           observe: "attiva \"Pacini senza capsula\": diventa un recettore ad adattamento lento, come nell'esperimento di Loewenstein." },
         { id: 'meccanocettori', title: 'Vibrazione: chi risponde a quale frequenza?', preset: { stim: 'vib', A: 2, f: 250 },
           predict: { q: "Una vibrazione di 2 µm a 250 Hz attiva soprattutto…", options: ["il disco di Merkel", "il corpuscolo di Meissner", "il corpuscolo di Pacini"], answer: 2, why: "Il Pacini è il più sensibile alle alte frequenze (200–300 Hz) con soglie sotto il micrometro." },
-          observe: "porta la frequenza a 30 Hz e aumenta l'ampiezza: risponde il Meissner (flutter). Calcola le curve di soglia." },
+          observe: "porta la frequenza a 10 Hz con un'ampiezza di circa 40 µm: scaricano Meissner e Merkel (flutter) e il Pacini resta silente. Poi torna a 250 Hz con 1 µm: scarica solo il Pacini. Calcola le curve di soglia per vedere il minimo di ogni recettore." },
         { id: 'duepunti', preset: { reg: 'dito', d: 3 },
           observe: "confronta il polpastrello con il dorso; togli l'inibizione laterale: la soglia di discriminazione aumenta." }
       ],

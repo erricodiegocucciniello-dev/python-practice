@@ -151,6 +151,31 @@
       }
       rebuildLipids(); upd();
       if (scn) scn.onFrame(place);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { sT.set(37); sU.set(0.5); sC.set(0.3); },
+        narrate: function () {
+          var f = F.fmt, fl = F.membraneFluidity(st.T, st.unsat, st.chol);
+          var s = `Guardi il doppio strato dall'alto: in alto il foglietto <b>esterno</b> (verso l'acqua extracellulare), in basso quello <b>citosolico</b>. Le teste tonde sono idrofile e guardano l'acqua, le code idrofobiche si nascondono al centro. `, a, b = '';
+          if (fl.gel > 0.7) a = `A ${f(st.T, 0)} °C la miscela è sotto la sua temperatura di transizione (T<sub>m</sub> = ${f(fl.Tm, 0)} °C): le code sono ordinate e ferme, come in un <b>gel</b>. I lipidi quasi non si spostano lateralmente (D = ${f(fl.D, fl.D < 0.1 ? 3 : 1)} µm²/s) e le proteine restano bloccate: la membrana non funziona bene.`;
+          else if (fl.gel < 0.3) a = `A ${f(st.T, 0)} °C, sopra T<sub>m</sub> (${f(fl.Tm, 0)} °C), la membrana è <b>fluida</b>: le code si agitano e i lipidi diffondono lateralmente (D = ${f(fl.D, 1)} µm²/s, circa ${f(Math.sqrt(4 * fl.D), 1)} µm in un secondo). Così lipidi e proteine possono muoversi, come richiede il modello a mosaico fluido.`;
+          else a = `A ${f(st.T, 0)} °C si è <b>nella zona di transizione</b> (T<sub>m</sub> = ${f(fl.Tm, 0)} °C): parte della membrana è in fase gel e parte fluida, e la diffusione cambia molto anche per piccole variazioni di temperatura.`;
+          if (st.chol >= 0.2) b += ` Il <b>colesterolo</b> (blocchetti gialli) si incastra tra le code: a caldo le irrigidisce, a freddo impedisce loro di impaccarsi in un gel. Attenua l'effetto della temperatura (nel grafico la curva piena è più piatta di quella tratteggiata, senza colesterolo).`;
+          if (st.unsat >= 0.6) b += ` Molte code sono <b>insature</b>: i doppi legami <i>cis</i> piegano le catene (le code spezzate che vedi), impediscono l'impaccamento e abbassano T<sub>m</sub>.`;
+          else if (st.unsat <= 0.2) b += ` Le code sono quasi tutte sature: dritte, si impaccano bene e la membrana gela facilmente (T<sub>m</sub> alta).`;
+          return { kind: fl.gel > 0.7 ? 'warn' : '', html: s + a + b };
+        },
+        experiments: [
+          { label: 'Membrana fisiologica', run: function () { sT.set(37); sU.set(0.5); sC.set(0.3); }, why: `A 37 °C, con un buon numero di insaturazioni e colesterolo, la membrana è fluida e stabile.` },
+          { label: 'Fredda, code sature, senza colesterolo', run: function () { sT.set(5); sU.set(0.1); sC.set(0); }, why: `Le code dritte si impaccano e la membrana <b>gela</b>: la diffusione laterale crolla di migliaia di volte.` },
+          { label: 'Stessa, con colesterolo', run: function () { sT.set(5); sU.set(0.1); sC.set(0.4); }, why: `Il colesterolo si incastra tra le code e le <b>disturba</b>: la diffusione resta molto più alta di prima, anche se la membrana è fredda.` },
+          { label: 'Fredda, ma molte insaturazioni', run: function () { sT.set(5); sU.set(0.9); sC.set(0); }, why: `Le code piegate non si impaccano: la membrana resta fluida anche a 5 °C. È il motivo per cui gli organismi che vivono al freddo hanno più acidi grassi insaturi.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); if (scn) scn.dispose(); } };
     }
   });
@@ -224,6 +249,26 @@
       reset(); upd();
       var loop = null;
       if (scn) scn.onFrame(frame); else loop = U.loop(L.main, frame);
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var feSet = function (T, inhib) { sT.set(T); tI.set(inhib); sS.set(4); reset(); };
+      U.explainer(L, {
+        poll: 500,
+        legend: [['#e05a47', 'puntini rossi: proteine della cellula umana'], ['#3cb46e', 'puntini verdi: proteine della cellula di topo']],
+        narrate: function () {
+          var f = F.fmt, D = Dof(st.T), m = mixing();
+          var s = `Una cellula umana e una di topo sono state fuse in un'unica cellula: all'inizio le loro proteine di membrana stanno in due metà separate. `;
+          if (st.T <= 20) return { kind: 'warn', html: s + `A ${f(st.T, 0)} °C i lipidi si avvicinano alla fase gel: la diffusione laterale delle proteine è lentissima (D = ${f(D, 4)} µm²/s) e dopo ${f(st.tmin, 0)} min il mescolamento è solo del ${f(m, 0)}%. Nell'esperimento reale a bassa temperatura le due popolazioni restavano separate.` };
+          return s + `Le proteine <b>diffondono lateralmente</b> nel doppio strato fluido (D = ${f(D, 3)} µm²/s) e si mescolano: dopo ${f(st.tmin, 0)} min il mescolamento è del ${f(m, 0)}%. ${st.inhib ? `Gli <b>inibitori metabolici</b> tolgono l'ATP, ma il mescolamento procede lo stesso: è diffusione passiva, non un trasporto che consuma energia.` : `Nell'esperimento reale a 37 °C il mescolamento era completo in circa 40 minuti.`}`;
+        },
+        experiments: [
+          { label: '37 °C', run: function () { feSet(37, false); }, why: `Le proteine diffondono nel doppio strato fluido e le due «metà» si mescolano.` },
+          { label: '15 °C', run: function () { feSet(15, false); }, why: `Con i lipidi quasi in fase gel le proteine si muovono pochissimo: dopo lo stesso tempo il mescolamento è molto minore. La fluidità della membrana dipende dalla temperatura.` },
+          { label: 'Senza ATP a 37 °C', run: function () { feSet(37, true); }, why: `Il mescolamento avviene allo stesso modo: la diffusione laterale è <b>passiva</b>, non richiede energia metabolica.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
@@ -236,7 +281,7 @@
     mount: function (host, P) {
       var L = U.simLayout(host), st = { a: 0.65, v: 1.0, l: 1.75 };
       var presets = {
-        lyso: ['Detergente / lisofosfolipide (1 coda)', 0.6, 0.45, 1.5],
+        lyso: ['Detergente / lisofosfolipide (1 coda)', 0.85, 0.4, 1.5],
         pc: ['Fosfatidilcolina (PC, 2 code)', 0.65, 1.0, 1.75],
         pe: ['Fosfatidiletanolammina (PE, testa piccola)', 0.42, 1.0, 1.6]
       };
@@ -288,6 +333,27 @@
         cv.redraw();
       }
       upd();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      U.explainer(L, {
+        watch: ro,
+        base: function () { pSel.set('pc'); },
+        narrate: function () {
+          var f = F.fmt, P = st.v / (st.a * st.l);
+          var s = `La molecola ha una testa polare di area <b>a</b> = ${f(st.a, 2)} nm², code di volume <b>v</b> = ${f(st.v, 2)} nm³ e lunghezza <b>l</b> = ${f(st.l, 2)} nm. Il parametro di impaccamento P = v/(a·l) = <b>${f(P, 2)}</b> descrive la sua forma. `;
+          if (P < 1 / 3) return s + `P &lt; 1/3: la testa è molto larga rispetto alla coda, la molecola ha forma di <b>cono</b>. Per nascondere le code all'acqua serve una forte curvatura: si formano <b>micelle sferiche</b> (come i detergenti e i lisofosfolipidi, che hanno una sola coda).`;
+          if (P < 0.5) return s + `1/3 &lt; P &lt; 1/2: forma a cono troncato, si formano <b>micelle cilindriche</b>.`;
+          if (P <= 1) return { kind: 'ok', html: s + `½ &lt; P ≤ 1: testa e code hanno sezioni simili, la molecola è un <b>cilindro</b>. Si affiancano in due strati con le code nascoste al centro: <b>doppio strato</b>, la struttura delle membrane (fosfatidilcolina e sfingomielina).` };
+          return s + `P &gt; 1: la testa è piccola rispetto alle code, un <b>cono rovesciato</b>. Queste molecole curvano la membrana in senso opposto e formano strutture invertite (fase esagonale H<sub>II</sub>); la fosfatidiletanolammina, con la testa piccola, ne è l'esempio.`;
+        },
+        experiments: [
+          { label: 'Fosfatidilcolina (due code)', run: function () { pSel.set('pc'); }, why: `Testa e code hanno sezioni simili: forma cilindrica, <b>doppio strato</b>.` },
+          { label: 'Detergente (una coda)', run: function () { pSel.set('lyso'); }, why: `Con una sola coda il volume delle code è piccolo rispetto alla testa: forma conica, <b>micelle</b>. Per questo i detergenti sciolgono le membrane.` },
+          { label: 'Fosfatidiletanolammina', run: function () { pSel.set('pe'); }, why: `La testa piccola avvicina P a 1 e oltre: queste molecole tendono a curvare la membrana, utile nei processi di fusione e gemmazione.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { cv.dispose(); } };
     }
   });

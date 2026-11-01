@@ -39,6 +39,39 @@
         ro.set('p', F.fmt(Math.max.apply(null, r.DA), 2) + ' µM'); ro.set('h', F.fmt(half(r) * 1000, 0) + ' ms'); ro.set('b', F.fmt(r.DA[r.DA.length - 1], 3) + ' µM');
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var maBase = function () { dSel.set('none'); sF.set(20); sD.set(0.5); };
+      U.explainer(L, {
+        watch: ro,
+        base: maBase,
+        legend: [['--faint', 'tratteggio: controllo senza farmaci'], ['--c1', 'curva blu: condizione scelta']],
+        narrate: function () {
+          var f = F.fmt, o = Object.assign({ freq: st.f, trainDur: st.dur, tmax: 6 }, drugs[st.drug][1]), r = F.monoamine(o), c = F.monoamine({ freq: st.f, trainDur: st.dur, tmax: 6 });
+          var pk = Math.max.apply(null, r.DA), pkC = Math.max.apply(null, c.DA), b = r.DA[r.DA.length - 1], bC = c.DA[c.DA.length - 1];
+          var T = {
+            none: `Una scarica di ${st.f} Hz per ${f(st.dur, 1)} s libera dopamina (circa 0,1 µM per impulso) nella fessura. Il trasportatore <b>DAT</b> la ricattura (cinetica di Michaelis-Menten) e la concentrazione ricade: picco ${f(pk, 2)} µM, dimezzamento in ${f(half(r) * 1000, 0)} ms. È la rimozione rapida a «spegnere» il segnale.`,
+            coc: `La <b>cocaina</b> blocca DAT (inibitore competitivo): la dopamina non viene ricatturata, resta più a lungo nella fessura (dimezzamento ${f(half(r) * 1000, 0)} ms contro ${f(half(c) * 1000, 0)}) e si accumula (picco ${f(pk, 2)} µM contro ${f(pkC, 2)}). Più dopamina nella fessura significa effetto psicostimolante.`,
+            amph: `L'<b>anfetamina</b> entra nel terminale tramite DAT (ne è un substrato), svuota le vescicole (via VMAT) e fa lavorare DAT <b>al contrario</b>: la dopamina esce dal neurone anche senza scarica e il livello di base sale (ora ${f(b, 2)} µM contro ${f(bC, 2)}). Il meccanismo è diverso da quello della cocaina, che si limita a bloccare.`,
+            res: `La <b>reserpina</b> blocca VMAT: le vescicole non si riempiono e ogni impulso libera molta meno dopamina (picco ${f(pk, 2)} µM contro ${f(pkC, 2)}). Svuotando i depositi di monoamine può causare depressione e parkinsonismo.`,
+            maoi: `Gli <b>inibitori delle MAO</b> riducono la degradazione intracellulare: più dopamina (come noradrenalina e serotonina) resta nelle vescicole e ogni impulso ne libera di più (picco ${f(pk, 2)} µM contro ${f(pkC, 2)}).`,
+            park: `Nel <b>Parkinson</b> si perde la maggior parte dei neuroni dopaminergici della sostanza nera: ogni scarica libera poca dopamina nello striato (picco ${f(pk, 2)} µM contro ${f(pkC, 2)}), da cui rigidità, acinesia e tremore.`,
+            ldopa: `La <b>L-DOPA</b> attraversa la barriera ematoencefalica (la dopamina no) e viene convertita in dopamina nei neuroni rimasti: il rilascio risale verso la norma (picco ${f(pk, 2)} µM contro ${f(pkC, 2)} del controllo).`
+          };
+          return T[st.drug];
+        },
+        experiments: [
+          { label: 'Controllo', run: function () { maBase(); }, why: `Rilascio per impulso, poi ricaptazione rapida da parte di DAT: la dopamina ricade in meno di un secondo.` },
+          { label: 'Cocaina', run: function () { maBase(); dSel.set('coc'); }, why: `Il picco è più alto e la rimozione molto più lenta: la dopamina si accumula nella fessura.` },
+          { label: 'Anfetamina', run: function () { maBase(); dSel.set('amph'); }, why: `La dopamina esce dal neurone anche a riposo (trasporto invertito e vescicole svuotate): il livello di base sale.` },
+          { label: 'Reserpina', run: function () { maBase(); dSel.set('res'); }, why: `Senza VMAT le vescicole sono vuote: il rilascio per impulso crolla.` },
+          { label: 'Inibitore delle MAO', run: function () { maBase(); dSel.set('maoi'); }, why: `Meno dopamina viene degradata: ne resta di più nelle vescicole e il rilascio aumenta.` },
+          { label: 'Parkinson', run: function () { maBase(); dSel.set('park'); }, why: `Con pochi neuroni dopaminergici ogni scarica libera pochissima dopamina nello striato.` },
+          { label: 'Parkinson + L-DOPA', run: function () { maBase(); dSel.set('ldopa'); }, why: `La L-DOPA (precursore, supera la barriera ematoencefalica) restituisce dopamina ai neuroni rimasti: il rilascio sale verso la norma.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); } };
     }
   });
@@ -134,6 +167,38 @@
         }
       }
       vis(); run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var plBase = function () { mSel.set('quanti'); sCa.set(0.8); sMg.set(6.8); sCur.set(0); tMG.set(false); tNeo.set(false); };
+      var plSic = function () { mSel.set('sic'); sCur.set(0); tMG.set(false); tNeo.set(false); };
+      U.explainer(L, {
+        watch: ro,
+        base: plBase,
+        narrate: function () {
+          var f = F.fmt, sn = ro.snapshot(), s;
+          if (st.mode === 'quanti') {
+            var m = 2000 * F.releaseProb(st.Ca, st.Mg);
+            s = `Ogni vescicola di ACh libera un <b>quanto</b> di trasmettitore (circa 0,4 mV di depolarizzazione). Il numero di vescicole liberate per stimolo è casuale (statistica di Poisson) con media m = <b>${f(m, m < 10 ? 2 : 0)}</b>, che dipende dal Ca²⁺ (${f(st.Ca, 2)} mM) e dal Mg²⁺ (${f(st.Mg, 1)} mM, che compete con il Ca²⁺). `;
+            if (m <= 20) s += `Con m piccolo la risposta evocata è 0, 1, 2… quanti: l'istogramma ha <b>picchi a multipli interi di 0,4 mV</b> e molti <b>fallimenti</b> (${sn[3].value} degli stimoli). Si può stimare m dai fallimenti, m = ln(N/N₀) = ${sn[1].value}, o dal rapporto tra media e quanto (${sn[2].value}).`;
+            else s += `Con m ≈ ${f(m, 0)} i quanti si sommano e la risposta è una campana continua di molti mV, ben sopra la soglia: è la situazione normale della placca.`;
+            return s;
+          }
+          if (st.mode === 'sic') return `Il <b>fattore di sicurezza</b> è il rapporto tra l'ampiezza del potenziale di placca e quella necessaria per raggiungere la soglia della fibra (circa 20 mV): ora ${sn[0].value}. Se è maggiore di 1 ogni PdA del nervo produce un PdA muscolare; se è minore di 1 la fibra non scarica. ${st.cur > 0 ? 'Il curaro occupa il ' + f(st.cur * 100, 0) + '% dei recettori. ' : ''}${st.mg ? 'Nella miastenia grave gli anticorpi riducono i recettori disponibili. ' : ''}${st.neo ? "La neostigmina inibisce l'AChE: l'ACh resta più a lungo e il potenziale di placca è più grande e più lungo. " : ''}Nella stimolazione a 3 Hz le vescicole si deplezionano e l'ampiezza cala: se il fattore di sicurezza è ridotto, le risposte successive scendono sotto soglia (affaticabilità). Esito su 10 stimoli a 3 Hz: <b>${sn[3].value}</b>.`;
+          return `Fatt e Katz: con il curaro il potenziale di placca è sottosoglia e si vede che è <b>locale</b>: l'ampiezza cala con la distanza dalla placca (λ = ${sn[0].value}; a 2 mm resta il ${sn[1].value}), il picco arriva in ritardo e si appiattisce. È la stessa proprietà di cavo del dendrite.`;
+        },
+        experiments: [
+          { label: 'Basso Ca²⁺, alto Mg²⁺', run: function () { plBase(); }, why: `Con pochi quanti per stimolo si vedono i singoli quanti: picchi a multipli di 0,4 mV e fallimenti.` },
+          { label: 'Ringer normale (Ca 2, Mg 1)', run: function () { plBase(); sCa.set(2); sMg.set(1); }, why: `In condizioni normali ogni PdA libera circa 200 vescicole: i quanti si sommano in una risposta grande e continua.` },
+          { label: 'Placca normale', base: plSic, run: function () { plSic(); }, why: `Il potenziale di placca (circa 40 mV) è ben oltre la soglia (20 mV): fattore di sicurezza di circa 2, e per 10 stimoli a 3 Hz la trasmissione è sempre efficace.` },
+          { label: 'Curaro 70%', base: plSic, run: function () { plSic(); sCur.set(0.7); }, why: `Bloccando il 70% dei recettori il potenziale di placca scende sotto la soglia della fibra: il fattore di sicurezza diventa minore di 1 e nessun PdA muscolare viene generato.` },
+          { label: 'Curaro 90%', base: plSic, run: function () { plSic(); sCur.set(0.9); }, why: `Con quasi tutti i recettori occupati il potenziale di placca è piccolissimo: paralisi, anche se il nervo scarica e libera ACh normalmente (è così che agisce il curaro).` },
+          { label: 'Miastenia grave', base: plSic, run: function () { plSic(); tMG.set(true); }, why: `Gli anticorpi riducono i recettori: all'inizio il fattore di sicurezza basta, ma durante la stimolazione ripetuta la deplezione fa scendere le risposte sotto soglia: <b>affaticabilità</b>.` },
+          { label: 'Miastenia + neostigmina', base: plSic, run: function () { plSic(); tMG.set(true); tNeo.set(true); }, why: `Inibendo l'AChE, l'ACh agisce più a lungo sui recettori rimasti: il potenziale di placca aumenta e la trasmissione migliora. È la terapia sintomatica.` },
+          { label: 'Fatt e Katz: distanza', run: function () { mSel.set('dist'); }, why: `Il potenziale di placca, misurato con curaro a distanze crescenti, si attenua e rallenta: è locale e non si propaga attivamente.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { p1.dispose(); p2.dispose(); } };
     }
   });
@@ -209,6 +274,38 @@
         cv.redraw();
       }
       run();
+      /*EXPLAIN-START*/
+      // ---- Spiegazione guidata: cosa sta succedendo + prove ----
+      var inBase = function () { tE2.set(false); sRep.set(1); sGap.set(5); sE1.set(100); sE2.set(150); sDt.set(0); tI.set(false); iSel.set(-75); tPre.set(false); sG.set(1); };
+      var inAB = function () { inBase(); tE2.set(true); };
+      U.explainer(L, {
+        watch: ro,
+        base: inBase,
+        legend: [['#3cb46e', 'triangoli verdi: sinapsi eccitatorie (A e B)'], ['#d94a3d', 'triangolo rosso: sinapsi inibitoria (C)'], ['--c1', 'tracciato blu: potenziale al soma'], ['--na', 'tratteggio arancio: potenziale nell\'assone']],
+        narrate: function () {
+          var f = F.fmt, sn = ro.snapshot(), ap = sn[1].value === 'sì';
+          var s = `Il neurone <b>somma</b> i potenziali postsinaptici che arrivano al <b>segmento iniziale</b> dell'assone, dove la soglia è più bassa. `;
+          s += ap ? `Qui la somma ha superato la soglia (circa −50 mV) e nasce un <b>potenziale d'azione</b>. ` : `Qui la somma resta sotto la soglia: <b>nessun potenziale d'azione</b> (depolarizzazione massima al soma: ${sn[0].value}). `;
+          s += `Un singolo PPSE è piccolo e si attenua lungo il dendrite (λ ≈ 816 µm): la sinapsi A è a ${f(st.e1, 0)} µm dal soma, e più è lontana più il suo effetto arriva debole. `;
+          if (st.rep > 1) s += `<b>Sommazione temporale</b>: ${st.rep} impulsi sulla sinapsi A a ${f(st.gap, 0)} ms l'uno dall'altro ${st.gap <= 15 ? 'si sommano perché il PPS (decadimento con τ ≈ 20 ms) non si è ancora esaurito quando arriva il successivo' : 'si sommano poco perché il PPS si è quasi esaurito prima del successivo'}. `;
+          if (st.onE2) s += `<b>Sommazione spaziale</b>: la sinapsi B (a ${f(st.e2, 0)} µm) agisce insieme ad A e le depolarizzazioni si sommano al soma. `;
+          if (st.onI) s += st.inhE < -70 ? `L'<b>inibizione postsinaptica</b> C (iperpolarizzante, E = −75 mV) sottrae depolarizzazione e allontana dalla soglia. ` : `L'inibizione <b>di shunt</b> C (E vicino al riposo) non cambia molto Vm, ma aumenta la conduttanza e «disperde» la corrente eccitatoria. `;
+          if (st.pre) s += `L'<b>inibizione presinaptica</b> riduce del 70% il rilascio da A senza toccare gli altri ingressi.`;
+          return { kind: ap ? 'ok' : '', html: s };
+        },
+        experiments: [
+          { label: 'Una sola sinapsi (100 µm)', run: function () { inBase(); }, why: `Un solo PPSE è sottosoglia: serve la somma di più ingressi per far scattare il neurone.` },
+          { label: 'Sinapsi lontana (700 µm)', run: function () { inBase(); sE1.set(700); }, why: `Più la sinapsi è lontana dal soma, più il potenziale si attenua lungo il dendrite: il PPSE che arriva al soma è molto più piccolo e lento.` },
+          { label: 'Sommazione spaziale (A + B)', run: function () { inBase(); tE2.set(true); }, why: `Due sinapsi attive insieme si sommano al soma: la depolarizzazione supera la soglia e parte il potenziale d'azione.` },
+          { label: 'Sommazione temporale (5 impulsi, 3 ms)', run: function () { inBase(); sRep.set(5); sGap.set(3); }, why: `Gli impulsi ravvicinati si sovrappongono perché ogni PPS dura più dell'intervallo tra i due: le depolarizzazioni si accumulano (un solo impulso non basta).` },
+          { label: 'Impulsi troppo distanziati (40 ms)', run: function () { inBase(); sRep.set(3); sGap.set(40); }, why: `Se tra un impulso e il successivo il PPS è già svanito, non c'è sommazione: ogni impulso è sottosoglia da solo.` },
+          { label: 'Inibizione iperpolarizzante (A + B + C)', base: inAB, run: function () { inAB(); tI.set(true); iSel.set(-75); }, why: `La sinapsi inibitoria sottrae depolarizzazione al soma: gli stessi ingressi eccitatori che prima facevano scattare il neurone ora non bastano.` },
+          { label: 'Inibizione di shunt (A + B + C)', base: inAB, run: function () { inAB(); tI.set(true); iSel.set(-66); }, why: `Anche senza iperpolarizzare, la conduttanza inibitoria vicino al soma «disperde» la corrente eccitatoria e può impedire la scarica.` },
+          { label: 'Inibizione presinaptica su A (A + B)', base: inAB, run: function () { inAB(); tPre.set(true); }, why: `L'ingresso A pesa molto meno (−70% di rilascio), mentre B è invariato: l'inibizione presinaptica è <b>selettiva</b> per un solo ingresso.` }
+        ]
+      });
+      /*EXPLAIN-END*/
+
       return { destroy: function () { plot.dispose(); cv.dispose(); } };
     }
   });

@@ -99,7 +99,17 @@
       w.appendChild(el('div', { class: 'readout' + (it.hl ? ' hl' : '') }, [el('div', { class: 'rl', html: it.label }), v]));
       map[it.key] = v;
     });
-    return { el: w, set: function (k, txt) { if (map[k]) map[k].innerHTML = txt; } };
+    return {
+      el: w,
+      set: function (k, txt) { if (map[k]) map[k].innerHTML = txt; },
+      /** Etichette e valori attuali (testo semplice): serve a mostrare "prima → dopo". */
+      snapshot: function () {
+        return Array.prototype.map.call(w.children, function (c) {
+          var l = c.querySelector('.rl'), v = c.querySelector('.rv');
+          return { label: l ? l.textContent.trim() : '', value: v ? v.textContent.trim() : '' };
+        });
+      }
+    };
   };
 
   /** Struttura standard di un simulatore: colonna di controlli + area principale. */
