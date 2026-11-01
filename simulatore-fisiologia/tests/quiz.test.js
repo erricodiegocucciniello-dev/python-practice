@@ -148,6 +148,25 @@ test('Generatori: ogni domanda calcolata è ben formata e la risposta giusta è 
       assert.deepStrictEqual(v.errors, [], g.id + ' seed ' + seed + ': ' + v.errors.join('; '));
       assert.ok(x.w && x.w.length > 20, g.id + ': spiegazione');
       assert.strictEqual(new Set(x.o.map(s => s.toLowerCase())).size, x.o.length, g.id + ': opzioni uguali');
+      assert.strictEqual(x.o.length, 4, g.id + ' seed ' + seed + ': servono 4 opzioni, ce ne sono ' + x.o.length);
     }
   });
+});
+
+test('Generatori: le risposte giuste coincidono con il motore (Nernst, Michaelis-Menten, Poisson)', () => {
+  const g = id => Q.gens.find(x => x.id === 'g:' + id);
+  for (let seed = 1; seed <= 80; seed++) {
+    // Nernst: direzione calcolata con F.nernst
+    const n = g('nernst-direzione').make(Q.rng(seed));
+    assert.ok(/più positivo|più negativo|non cambia/.test(n.o[0]), n.o[0]);
+    // Nernst numerico: il valore giusto è quello di F.nernst arrotondato
+    const nv = g('nernst-valore').make(Q.rng(seed)), ko = parseFloat(nv.q.match(/esterna = ([\d,.]+) mM/)[1].replace(',', '.'));
+    assert.strictEqual(parseInt(nv.o[0].replace('−', '-')), Math.round(F.nernst(ko, 140, 1, 37)));
+    // Michaelis-Menten: la frazione del flusso massimo
+    const mm = g('mm-frazione').make(Q.rng(seed)), km = parseFloat(mm.q.match(/Km = (\d+) mM/)[1]), c = parseFloat(mm.q.match(/di ([\d,.]+) mM\. Il flusso/)[1].replace(',', '.'));
+    const frac = c / (km + c), want = Math.abs(frac - 0.5) < 1e-9 ? 'metà' : Math.abs(frac - 0.75) < 1e-9 ? 'i 3/4' : Math.abs(frac - 0.9) < 1e-9 ? 'il 90%' : Math.round(frac * 100) + '%';
+    assert.ok(mm.o[0].indexOf(want) >= 0, 'MM: ' + mm.q + ' => ' + mm.o[0]);
+  }
+  // Poisson: frazione di fallimenti = e^-m
+  for (let seed = 1; seed <= 20; seed++) { const p = g('poisson-fallimenti').make(Q.rng(seed)), m = parseInt(p.q.match(/m = (\d)/)[1]); assert.strictEqual(parseInt(p.o[0].match(/(\d+)%/)[1]), Math.round(Math.exp(-m) * 100)); }
 });
