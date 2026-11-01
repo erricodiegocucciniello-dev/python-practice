@@ -29,6 +29,39 @@ Per averlo online (anche dal telefono) puoi pubblicare la cartella con GitHub Pa
 | Somatosensoriale | 29 | meccanocettori, discriminazione di due punti |
 | Rene | 30 | glomerulo (Starling), nefrone e ADH, bilancio idrico |
 
+## Prova d'esame (intercorsi a crocette)
+
+Dal menu, **Prova d'esame**. Domande a risposta multipla con **una sola risposta giusta**, 1 punto l'una, nessuna penalità, come nell'esame. Ci sono tre prove: **Primo intercorso**, **Secondo intercorso** e **Prova completa**. Ognuna ha due modi:
+
+- **Simulazione**: pesca a caso, una domanda per lezione a turno (così nessun argomento resta fuori), con una leggera preferenza per le domande mai viste.
+- **Sui miei errori** (si attiva dopo la prima simulazione): circa 60% di domande sbagliate di recente o spesso (con più peso alle lezioni dove sbagli di più), 25% nuove, 15% di ripasso.
+
+Durante la prova: timer, pallini per saltare tra le domande, «segna per rivedere», tasti rapidi (A–E o 1–5 per rispondere, ← → per scorrere, F per segnare). Se chiudi la pagina la prova si può riprendere; se il tempo scade si consegna da sola. A fine prova: punteggio, correzione domanda per domanda con la spiegazione e il collegamento alla lezione, «rifai solo le sbagliate».
+
+**Valori predefiniti** (modificabili in «Impostazioni delle prove», si salvano da soli): 15 domande e 30 minuti per ogni intercorso, 30 domande e 45 minuti per la prova completa; primo intercorso = slide 01–14, secondo = 15–30. Sono una stima: cambiali quando conosci quelli veri.
+
+**Storico**: tentativi, andamento, argomenti dal più debole, domande sbagliate più spesso. Si salva nel browser di quel computer; con **Esporta / Importa** lo si può copiare o spostare (i tentativi già presenti non vengono duplicati).
+
+### Le domande
+
+- `js/quiz/bank-*.js`: l'archivio incluso (circa 330 domande su tutte le lezioni), scritto dalle slide e, per le prime lezioni, tenendo conto di ciò che la prof sottolinea a lezione. Ogni domanda ha la fonte (lezione), una spiegazione e, se la prof ne ha parlato, il segno «detto a lezione».
+- `js/quiz/gen.js`: 17 tipi di domande **calcolate dal motore** (Nernst, Michaelis-Menten, Fick, osmolarità, τ, λ, Poisson, Starling…): i numeri cambiano a ogni prova e la risposta giusta viene dai modelli del sito, quindi è sempre esatta.
+- Le opzioni vengono rimescolate a ogni prova.
+
+### Aggiungere domande senza Claude Code
+
+1. Nella pagina **Prova d'esame**, in fondo, apri «Aggiungere nuove domande».
+2. Premi «Copia le istruzioni» e incollale in un assistente (ChatGPT, Gemini…) insieme al testo di una lezione (slide o appunti).
+3. L'assistente risponde con una lista JSON: incollala nella casella, premi **Controlla** (segnala le domande con errori di formato) e poi **Salva**.
+
+Le domande aggiunte vengono salvate nel browser (non nel sito), compaiono nelle prove della lezione indicata e sono incluse in Esporta/Importa. Formato di una domanda (la **prima** opzione è sempre quella giusta; il sito le rimescola):
+
+```json
+[{ "l": "13", "t": "Nernst", "q": "Testo della domanda?", "o": ["giusta", "errata", "errata", "errata"], "w": "Perché la prima è giusta." }]
+```
+
+Per modificare o correggere le domande incluse nel sito basta aprire il file `js/quiz/bank-….js` corrispondente (dalla pagina GitHub del repository con l'icona della matita) e cambiare il testo: ogni domanda è una riga `A('lezione', 'argomento', 'domanda', ['giusta', 'errata', 'errata', 'errata'], 'spiegazione')`. Alla fine del salvataggio (commit) il sito pubblicato si aggiorna da solo in uno o due minuti. Dopo una modifica conviene eseguire `node --test tests/quiz.test.js`, che controlla formato, duplicati e che la risposta giusta non sia riconoscibile dalla lunghezza.
+
 ## Capire cosa sta succedendo
 
 Ogni simulatore ha in alto un riquadro di spiegazione (`js/ui/explain.js`):
@@ -58,6 +91,7 @@ Il motore è verificato da test automatici che confrontano i risultati con valor
 
 ```bash
 node --test tests/core.test.js        # 25 test numerici del motore
+node --test tests/quiz.test.js        # archivio di domande, selezione, punteggio, storico, generatori
 node tests/browser.test.js            # apre tutte le pagine in Chromium (richiede Playwright), clicca ogni «Prova»
 ```
 
@@ -70,6 +104,8 @@ js/core/                   motore numerico (funziona anche in Node per i test)
 js/ui/                     componenti, grafici, scene 3D, riquadro di spiegazione (explain.js)
 js/sims/                   i 40 simulatori
 js/lessons.js              contenuti delle 31 lezioni
+js/lessons-prof.js         riquadri «Detto a lezione» (ciò che la prof sottolinea, lezioni 1–13)
+js/quiz/                   prove d'esame: motore, pagina, archivio di domande, domande calcolate
 vendor/                    three.js r147 (MIT), KaTeX 0.16.9 (MIT)
 tests/                     test del motore e del browser
 ```

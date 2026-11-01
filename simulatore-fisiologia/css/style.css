@@ -388,3 +388,9 @@ main { padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left, 0px))
 .pc-w { font-size: .92rem; color: var(--muted); } .pc-w b { color: var(--text); }
 .chip.prof { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); }
 @media (max-width: 600px) { .pbar { grid-template-columns: 1fr; } .pb-track { order: 2; } .pq { padding: 12px; } }
+
+/* riquadro «Detto a lezione» */
+.box.prof { margin: 12px 0; border-left: 4px solid var(--accent); background: var(--accent-soft); }
+.box.prof h3 { color: var(--accent); }
+.box.prof ul { padding-left: 1.1em; }
+.box.prof li { margin: .35em 0; }

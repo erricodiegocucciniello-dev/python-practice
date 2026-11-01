@@ -135,6 +135,9 @@
     });
     if (L.practical) right.appendChild(U.texify(el('p', { html: L.practical })));
     c.appendChild(el('div', { class: 'two-col' }, [left, right]));
+    if (L.prof && L.prof.length) {
+      c.appendChild(U.texify(el('div', { class: 'box prof' }, [el('h3', { text: 'Detto a lezione' }), el('ul', null, L.prof.map(function (p) { return el('li', { html: p }); }))])));
+    }
     (L.warn || []).forEach(function (w) { c.appendChild(U.texify(U.note('warn', 'Attenzione (errore nella slide).', w))); });
     (L.info || []).forEach(function (w) { c.appendChild(U.texify(U.note('info', 'Nota.', w))); });
 
