@@ -9,14 +9,15 @@
     section: 'rene',
     short: 'Pressione idrostatica glomerulare, pressione oncotica che aumenta lungo il capillare e pressione nella capsula di Bowman; effetti delle arteriole afferente ed efferente.',
     mount: function (host, P) {
-      var L = U.simLayout(host), st = { Raff: 1, Reff: 1, Pa: 100, C: 7, PBS: 15, Kf: 1 };
+      var L = U.simLayout(host), st = { Raff: 1, Reff: 1, Pa: 100, C: 7, PBS: 15, Kf: 1, auto: !!P.auto };
       var sA = U.slider({ label: 'Resistenza dell\'arteriola afferente', min: 0.5, max: 2.5, step: 0.05, value: 1, digits: 2, unit: '×', onInput: function (v) { st.Raff = v; run(); } });
       var sE = U.slider({ label: 'Resistenza dell\'arteriola efferente', min: 0.5, max: 4, step: 0.05, value: 1, digits: 2, unit: '×', onInput: function (v) { st.Reff = v; run(); } });
       var sPa = U.slider({ label: 'Pressione arteriosa renale', min: 60, max: 160, step: 1, value: 100, digits: 0, unit: 'mmHg', onInput: function (v) { st.Pa = v; run(); } });
       var sC = U.slider({ label: 'Proteine plasmatiche', min: 3, max: 10, step: 0.1, value: 7, digits: 1, unit: 'g/dL', onInput: function (v) { st.C = v; run(); } });
       var sB = U.slider({ label: 'Pressione nella capsula di Bowman', min: 5, max: 40, step: 1, value: 15, digits: 0, unit: 'mmHg', onInput: function (v) { st.PBS = v; run(); } });
       var sK = U.slider({ label: 'Coefficiente di filtrazione K<sub>f</sub>', min: 0.3, max: 2, step: 0.05, value: 1, digits: 2, unit: '×', onInput: function (v) { st.Kf = v; run(); } });
-      [sA.el, sE.el, sPa.el, sC.el, sB.el, sK.el].forEach(function (e) { L.controls.appendChild(e); });
+      var tAuto = U.toggle({ label: 'Autoregolazione (miogena e feedback tubulo-glomerulare)', value: st.auto, onChange: function (v) { st.auto = v; run(); } });
+      [sA.el, sE.el, sPa.el, sC.el, sB.el, sK.el, tAuto.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(el('div', { class: 'btn-row' }, [
         U.button('Simpatico: costrizione afferente', function () { reset(); sA.set(1.5); }),
         U.button('Angiotensina II: costrizione efferente', function () { reset(); sE.set(1.6); }),
@@ -24,31 +25,40 @@
         U.button('Ostruzione urinaria', function () { reset(); sB.set(30); }),
         U.button('Condizioni normali', function () { reset(); })
       ]));
-      function reset() { [sA, sE, sK].forEach(function (s) { s.set(1, true); }); sPa.set(100, true); sC.set(7, true); sB.set(15, true); st = { Raff: 1, Reff: 1, Pa: 100, C: 7, PBS: 15, Kf: 1 }; run(); }
-      L.controls.appendChild(U.params('Filtrazione calcolata integrando la legge di Starling lungo il capillare glomerulare: $dQ = K_f\\,(P_{GC} - P_{BS} - \\pi_{GC})\\,dx$, con π<sub>GC</sub> che sale perché le proteine si concentrano (Landis-Pappenheimer: $\\pi = 2{,}1C + 0{,}16C^2 + 0{,}009C^3$). Resistenze calibrate su: flusso ematico renale 1,1 L/min, P<sub>GC</sub> 55 mmHg, GFR 125 mL/min; K<sub>f</sub> calibrato di conseguenza. P<sub>GC</sub> di riferimento: le slide indicano 45–50 mmHg, altri testi (Guyton) 60 mmHg. L\'autoregolazione (miogena, feedback tubulo-glomerulare) <b>non</b> è inclusa, per vedere gli effetti diretti.'));
+      function reset() { var au = st.auto; [sA, sE, sK].forEach(function (s) { s.set(1, true); }); sPa.set(100, true); sC.set(7, true); sB.set(15, true); st = { Raff: 1, Reff: 1, Pa: 100, C: 7, PBS: 15, Kf: 1, auto: au }; run(); }
+      // Autoregolazione: la resistenza dell'afferente si adatta alla pressione di perfusione (tra 80 e 180 mmHg il flusso resta quello di 100 mmHg).
+      function opts(extra) { return Object.assign({ Raff: st.Raff, Reff: st.Reff, Pa: st.Pa, Cprot: st.C, PBS: st.PBS, Kf: st.Kf }, extra || {}); }
+      function autoK() {
+        if (!st.auto) return 1;
+        var target = F.glomerulus(opts({ Pa: 100 })).RPF, pc = Math.max(80, Math.min(180, st.Pa)), lo = 0.3, hi = 4, i, mid;
+        for (i = 0; i < 40; i++) { mid = (lo + hi) / 2; if (F.glomerulus(opts({ Pa: pc, Raff: st.Raff * mid })).RPF > target) lo = mid; else hi = mid; }
+        return (lo + hi) / 2;
+      }
+      function glom(extra) { return F.glomerulus(opts(Object.assign({ Raff: st.Raff * autoK() }, extra || {}))); }
+      L.controls.appendChild(U.params('Filtrazione calcolata integrando la legge di Starling lungo il capillare glomerulare: $dQ = K_f\\,(P_{GC} - P_{BS} - \\pi_{GC})\\,dx$, con π<sub>GC</sub> che sale perché le proteine si concentrano (Landis-Pappenheimer: $\\pi = 2{,}1C + 0{,}16C^2 + 0{,}009C^3$). Resistenze calibrate su: flusso ematico renale 1,1 L/min, P<sub>GC</sub> 55 mmHg, GFR 125 mL/min; K<sub>f</sub> calibrato di conseguenza. P<sub>GC</sub> di riferimento: le slide indicano 45–50 mmHg, altri testi (Guyton) 60 mmHg. L\'autoregolazione (miogena, feedback tubulo-glomerulare) è <b>facoltativa</b>: spenta, si vedono gli effetti diretti; accesa, la resistenza dell\'afferente si adatta in modo da mantenere il flusso di quello a 100 mmHg tra 80 e 180 mmHg di pressione arteriosa (fuori da questo intervallo l\'autoregolazione non basta).'));
       U.texify(L.controls);
       var ro = U.readouts([{ key: 'gfr', label: 'GFR', hl: true }, { key: 'rpf', label: 'Flusso plasmatico renale' }, { key: 'ff', label: 'Frazione di filtrazione' }, { key: 'pgc', label: 'P<sub>GC</sub>' }]);
       L.main.appendChild(ro.el);
       var p1 = U.plot(L.main, { title: 'Pressioni lungo il capillare glomerulare', xlabel: 'posizione lungo il capillare (inizio → fine)', ylabel: 'mmHg', height: 240, xlim: [0, 1] });
       var p2 = U.plot(L.main, { title: 'GFR e flusso plasmatico al variare della resistenza efferente', xlabel: 'resistenza efferente (× normale)', ylabel: 'mL/min', height: 210, xlim: [0.5, 4] });
       function run() {
-        var g = F.glomerulus({ Raff: st.Raff, Reff: st.Reff, Pa: st.Pa, Cprot: st.C, PBS: st.PBS, Kf: st.Kf }), pr = g.profile;
+        var g = glom(), pr = g.profile;
         p1.update({ series: [{ name: 'P idrostatica glomerulare', x: pr.x, y: pr.PGC, color: '--c1' }, { name: 'P Bowman + π oncotica', x: pr.x, y: pr.pi.map(function (p) { return p + st.PBS; }), color: '--na' }, { name: 'pressione netta di filtrazione', x: pr.x, y: pr.NFP, color: '--c3', fill: true }], ylim: [0, 80], hlines: [] });
         ro.set('gfr', F.fmt(g.GFR, 0) + ' mL/min'); ro.set('rpf', F.fmt(g.RPF, 0) + ' mL/min'); ro.set('ff', F.fmt(g.FF * 100, 1) + '%');
         ro.set('pgc', F.fmt(g.PGC, 1) + ' mmHg' + (g.equilibrium ? ' · equilibrio di filtrazione' : ''));
-        var rs = F.linspace(0.5, 4, 36), gg = rs.map(function (r) { return F.glomerulus({ Raff: st.Raff, Reff: r, Pa: st.Pa, Cprot: st.C, PBS: st.PBS, Kf: st.Kf }); });
+        var rs = F.linspace(0.5, 4, 36), gg = rs.map(function (r) { return glom({ Reff: r }); });
         p2.update({ series: [{ name: 'GFR', x: rs, y: gg.map(function (x) { return x.GFR; }), color: '--c1' }, { name: 'flusso plasmatico (RPF)', x: rs, y: gg.map(function (x) { return x.RPF; }), color: '--na' }, { x: [st.Reff], y: [g.GFR], type: 'points', color: '--c1', r: 6 }], ylim: [0, null], vlines: [{ x: st.Reff, label: 'attuale' }] });
       }
       run();
       /*EXPLAIN-START*/
       // ---- Spiegazione guidata: cosa sta succedendo + prove ----
-      var glBase = function () { reset(); };
+      var glBase = function () { tAuto.set(false); reset(); };
       U.explainer(L, {
         watch: ro,
         base: glBase,
         legend: [['--c1', 'P idrostatica nel capillare (spinge fuori)'], ['--na', 'P della capsula di Bowman + π oncotica (trattengono)'], ['--c3', 'verde: pressione netta di filtrazione']],
         narrate: function () {
-          var f = F.fmt, g = F.glomerulus({ Raff: st.Raff, Reff: st.Reff, Pa: st.Pa, Cprot: st.C, PBS: st.PBS, Kf: st.Kf }), n = F.glomerulus({}), pr = g.profile, last = pr.x.length - 1;
+          var f = F.fmt, g = glom(), n = F.glomerulus({}), pr = g.profile, last = pr.x.length - 1;
           var s = `Il plasma viene filtrato verso la capsula di Bowman perché la pressione idrostatica nel capillare (P<sub>GC</sub> = <b>${f(g.PGC, 0)} mmHg</b>) spinge fuori più di quanto trattengano la pressione nella capsula (${f(st.PBS, 0)} mmHg) e la pressione oncotica delle proteine plasmatiche (π<sub>GC</sub>). Man mano che l'acqua esce, le proteine restano nel capillare e si concentrano: π<sub>GC</sub> sale da ${f(pr.pi[0], 0)} a ${f(pr.pi[last], 0)} mmHg e la pressione netta di filtrazione scende da ${f(pr.NFP[0], 0)} a ${f(pr.NFP[last], 0)} mmHg (area verde). `;
           if (g.equilibrium) s += `Verso la fine la pressione netta arriva a zero: <b>equilibrio di filtrazione</b>, l'ultimo tratto del capillare non filtra più. `;
           s += `Risultato: GFR <b>${f(g.GFR, 0)} mL/min</b> (condizioni normali: ${f(n.GFR, 0)}), con un flusso plasmatico di ${f(g.RPF, 0)} mL/min. `;
@@ -59,7 +69,7 @@
           if (st.Reff < 0.95) c.push(`L'<b>efferente dilatata</b> abbassa P<sub>GC</sub>: la GFR cala.`);
           if (Math.abs(st.C - 7) > 0.3) c.push(st.C < 7 ? `Con <b>poche proteine</b> la pressione oncotica è bassa: trattiene meno e la GFR aumenta.` : `Con <b>molte proteine</b> la pressione oncotica è alta: trattiene di più e la GFR cala.`);
           if (st.PBS > 17) c.push(`Con la <b>pressione di Bowman alta</b> (per esempio per un'ostruzione delle vie urinarie) la filtrazione è ostacolata e la GFR cala.`);
-          if (Math.abs(st.Pa - 100) > 3) c.push(`Cambiando la <b>pressione arteriosa</b> senza autoregolazione (qui non è inclusa) la GFR varia con essa; nel rene reale resta quasi costante tra circa 80 e 180 mmHg.`);
+          if (Math.abs(st.Pa - 100) > 3) c.push(st.auto ? (st.Pa >= 80 && st.Pa <= 180 ? `Con la <b>pressione arteriosa</b> a ${f(st.Pa, 0)} mmHg l'<b>autoregolazione</b> adatta la resistenza dell'afferente (×${f(autoK(), 2)}) e la GFR resta quasi quella normale (tra circa 80 e 180 mmHg).` : `A ${f(st.Pa, 0)} mmHg siamo <b>fuori dall'intervallo di autoregolazione</b> (80–180 mmHg): l'afferente non riesce più a compensare e la GFR segue la pressione.`) : `Cambiando la <b>pressione arteriosa</b> senza autoregolazione (accendila qui sotto) la GFR varia con essa; nel rene reale resta quasi costante tra circa 80 e 180 mmHg.`);
           if (Math.abs(st.Kf - 1) > 0.05) c.push(st.Kf < 1 ? `Un <b>K<sub>f</sub> ridotto</b> (meno superficie o permeabilità filtrante, per esempio per un danno glomerulare) abbassa la GFR.` : `Un <b>K<sub>f</sub> aumentato</b> alza la GFR.`);
           return s + c.join(' ');
         },
@@ -70,7 +80,9 @@
           { label: 'Efferente molto stretta', run: function () { glBase(); sE.set(4); }, why: `La GFR non cresce all'infinito: ha un massimo per costrizioni moderate e poi ridiscende. Con una costrizione estrema il flusso plasmatico scende a meno della metà, le proteine si concentrano subito, π sale fino a fermare la filtrazione (equilibrio) e il vantaggio della pressione alta si perde.` },
           { label: 'Ipoproteinemia', run: function () { glBase(); sC.set(4.5); }, why: `Meno proteine = pressione oncotica più bassa = meno forza che trattiene l'acqua: la GFR aumenta molto.` },
           { label: 'Ostruzione urinaria', run: function () { glBase(); sB.set(30); }, why: `Una pressione più alta nella capsula si oppone alla filtrazione: la GFR cala molto.` },
-          { label: 'Pressione arteriosa 140 (senza autoregolazione)', run: function () { glBase(); sPa.set(140); }, why: `Nel modello la GFR segue la pressione. Nel rene reale l'autoregolazione (miogena e feedback tubulo-glomerulare) tiene quasi costante la GFR tra circa 80 e 180 mmHg.` }
+          { label: 'Pressione arteriosa 140 (senza autoregolazione)', run: function () { glBase(); sPa.set(140); }, why: `Senza autoregolazione la GFR segue la pressione: aumenta molto, come in un sistema di semplici resistenze.` },
+          { label: 'Pressione arteriosa 140 con autoregolazione', run: function () { glBase(); sPa.set(140); tAuto.set(true); }, why: `L'afferente si costringe all'aumentare della pressione (risposta miogena e feedback tubulo-glomerulare): flusso e GFR restano quasi quelli normali. È per questo che la GFR è stabile tra circa 80 e 180 mmHg.` },
+          { label: 'Pressione arteriosa 60 con autoregolazione', run: function () { glBase(); sPa.set(60); tAuto.set(true); }, why: `Sotto circa 80 mmHg l'afferente è già al massimo della dilatazione e l'autoregolazione non basta: la GFR cala con la pressione (per questo nello shock si riduce la diuresi).` }
         ]
       });
       /*EXPLAIN-END*/
