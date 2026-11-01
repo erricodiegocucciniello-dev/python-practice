@@ -146,6 +146,79 @@
     return c;
   };
 
+  /** Neurone completo "a catena": dendrite passivo (cilindro equivalente di Rall) → soma →
+      segmento iniziale dell'assone (SIA: molti canali Na+, zona di innesco) → assone mielinico
+      (internodi passivi con mielina + nodi di Ranvier eccitabili) → terminale amielinico.
+      Indici: 0..nDend−1 dendrite (0 = estremità distale), poi soma, SIA, internodi/nodi, terminale.
+      Il riposo (−65 mV) è reso uniforme regolando EL di ogni compartimento eccitabile. */
+  Cable.neuron = function (o) {
+    o = o || {};
+    var nD = o.nDend || 70, Ld = (o.dendLen_um || 700) * 1e-4, dd = (o.dendDiam_um || 1) * 1e-4;
+    var Ri = o.Ri || 100, Rm = o.Rm || 20000, da = (o.axonDiam_um || 2) * 1e-4, nN = o.nNodes || 5, seg = o.segPerInternode || 6;
+    var somaD = (o.somaDiam_um || 25) * 1e-4, nAis = 6, Lais = 5e-4, Lnode = 1e-4, nTerm = 3, Lterm = 10e-4;
+    var Lint = (o.internode_um || 100 * (da * 1e4) / 0.6) * 1e-4;
+    var p = HH.defaults(), gpas = 1000 / Rm, scale = o.nodeScale || 10;
+    var nLam = (da * 1e4) * (1 / 0.6 - 1) / 2 / 0.016, mf = o.myelinFactor || 2 * nLam;
+    var C = { area: [], cm: [], isHH: [], gNa: [], gK: [], gL: [], EL: [], x: [], kind: [], len: [], dia: [] };
+    var pos = 0;
+    function add(kind, L, dia, hh, fNa, fK, passive) {
+      var area = kind === 'soma' ? Math.PI * dia * dia : Math.PI * dia * L;
+      C.area.push(area); C.len.push(L); C.dia.push(dia); C.kind.push(kind); C.isHH.push(hh ? 1 : 0);
+      C.cm.push(kind === 'myelin' ? 1 / mf : 1);
+      C.gNa.push(hh ? p.gNa * fNa : 0); C.gK.push(hh ? p.gK * fK : 0);
+      C.gL.push(passive !== undefined ? passive : (hh ? p.gL : gpas)); C.EL.push(-65);
+      C.x.push(pos + (kind === 'soma' ? 0 : L / 2)); pos += (kind === 'soma' ? 0 : L);
+    }
+    pos = -Ld; for (var i = 0; i < nD; i++) add('dend', Ld / nD, dd, false, 0, 0);
+    pos = 0; add('soma', 0, somaD, true, o.somaNa === undefined ? 0.3 : o.somaNa, 0.3, gpas);
+    pos = somaD / 2; var aisIdx = C.kind.length;
+    for (i = 0; i < nAis; i++) add('ais', Lais, da, true, o.aisNa || 12, o.aisK || 2, p.gL);
+    var nodeIdx = [];
+    // tre nodi in più oltre l'ultimo mostrato: l'estremità chiusa del modello altera l'ampiezza
+    // dei nodi che la precedono, quindi i nodi "visibili" (nodeIdx) stanno prima.
+    for (var k = 0; k < nN + 3; k++) {
+      for (var s = 0; s < seg; s++) add('myelin', Lint / seg, da, false, 0, 0, p.gL / mf);
+      if (k < nN) nodeIdx.push(C.kind.length);
+      add('node', Lnode, da, true, scale, scale, p.gL * scale);
+    }
+    var termIdx = C.kind.length;
+    for (i = 0; i < nTerm; i++) add('term', Lterm, da, true, 1, 1, p.gL);
+    var n = C.area.length, gax = [], somaI = nD;
+    for (i = 0; i < n - 1; i++) {
+      var Ai = C.dia[i], Aj = C.dia[i + 1];
+      // resistenza assiale in serie: metà del compartimento i + metà del compartimento j (il soma conta zero)
+      var ri = (C.kind[i] === 'soma' ? 0 : C.len[i] / 2) * 4 * Ri / (Math.PI * Ai * Ai);
+      var rj = (C.kind[i + 1] === 'soma' ? 0 : C.len[i + 1] / 2) * 4 * Ri / (Math.PI * Aj * Aj);
+      if (C.kind[i] === 'soma') ri = (C.len[i + 1] / 2) * 4 * Ri / (Math.PI * Aj * Aj) * 0; // soma isopotenziale
+      gax.push(1000 / (ri + rj));
+    }
+    // riposo uniforme: EL tale che la corrente netta sia zero a −65 mV
+    var s0 = HH.inf(-65), Vr = -65;
+    for (i = 0; i < n; i++) if (C.isHH[i]) {
+      var gna = C.gNa[i] * s0.m * s0.m * s0.m * s0.h, gk = C.gK[i] * Math.pow(s0.n, 4);
+      C.EL[i] = Vr + (gna * (Vr - 50) + gk * (Vr - (-77))) / C.gL[i];
+    }
+    var c = new Cable({ n: n, area: C.area, cm: C.cm, gax: gax, isHH: C.isHH, gNa: C.gNa, gK: C.gK, gL: C.gL, EL: C.EL, T: o.T === undefined ? 18.5 : o.T, x: C.x, kind: C.kind });
+    c.nDend = nD; c.dendLen = Ld; c.dendDx = Ld / nD; c.somaIndex = somaI; c.aisIndex = aisIdx; c.nodeIdx = nodeIdx; c.termIdx = termIdx;
+    c.lambda_um = Math.sqrt((Rm * dd) / (4 * Ri)) * 1e4; c.tau_ms = Rm * 1e-3;
+    /** indice del compartimento dendritico a distanza dist_um dal soma */
+    c.dendIndexAt = function (dist_um) { return Math.max(0, Math.min(nD - 1, Math.round(nD - dist_um * 1e-4 / (Ld / nD) - 0.5))); };
+    return c;
+  };
+
+  /** Funzione alfa per la conduttanza sinaptica: g(t) = gmax · (t/tp) · exp(1 − t/tp). */
+  Cable.alpha = function (t, tp) { return t <= 0 ? 0 : (t / tp) * Math.exp(1 - t / tp); };
+  /** Applica un insieme di sinapsi al tempo corrente: syn = [{i, t0, g (mS), E (mV), tp (ms)}]. */
+  Cable.prototype.applySyn = function (syn) {
+    var gs = this.gSyn, ge = this._ge || (this._ge = new Float64Array(this.n)), i;
+    gs.fill(0); ge.fill(0);
+    for (var k = 0; k < syn.length; k++) {
+      var s = syn[k], g = s.g * Cable.alpha(this.t - s.t0, s.tp || 0.5);
+      if (g > 0) { gs[s.i] += g; ge[s.i] += g * s.E; }
+    }
+    for (i = 0; i < this.n; i++) this.ESyn[i] = gs[i] > 0 ? ge[i] / gs[i] : 0;
+  };
+
   /** Cavo passivo (dendrite o fibra senza canali) per lo studio di λ e τ. */
   Cable.passive = function (o) {
     var d = (o.d_um || 2) * 1e-4, L = (o.length_um || 2000) * 1e-4, n = o.n || 100, Ri = o.Ri || 150, Rm = o.Rm || 20000;

@@ -3,14 +3,6 @@
   'use strict';
   var F = G.Fisio, U = F.ui, el = U.el;
 
-  /** Mappa di colore per il potenziale: −80 mV blu, −55 grigio, +40 rosso. */
-  function vColor(V, out) {
-    var t = F.clamp((V + 80) / 120, 0, 1), r, g, b;
-    if (t < 0.4) { var u = t / 0.4; r = 0.2 + 0.55 * u; g = 0.35 + 0.4 * u; b = 0.85 - 0.1 * u; }
-    else { var v = (t - 0.4) / 0.6; r = 0.75 + 0.25 * v; g = 0.75 - 0.55 * v; b = 0.75 - 0.6 * v; }
-    out.setRGB(r, g, b); return out;
-  }
-
   // ================================================================ Propagazione 3D
   F.registerSim('propagazione', {
     title: 'Propagazione del potenziale d\'azione (amielinica e saltatoria)',
@@ -31,11 +23,12 @@
       [tSel.el, sD.el, sT.el, tDem.el, stSel.el, bGo, sSp.el].forEach(function (e) { L.controls.appendChild(e); });
       L.controls.appendChild(U.params('Modello a compartimenti con canali di Hodgkin-Huxley (cinetica del calamaro, Q10 = 3). Amielinica: membrana eccitabile uniforme, R<sub>i</sub> = 35,4 Ω·cm (calamaro) — a 476 µm e 18,5 °C riproduce i ≈ 18,8 m/s calcolati da Hodgkin e Huxley. Mielinica: nodi di 1 µm con alta densità di canali, internodi = 100 × diametro esterno (rapporto g = 0,6), mielina che riduce capacità e conduttanza in proporzione al numero di lamelle; R<sub>i</sub> = 70 Ω·cm. Valori assoluti a 18,5 °C con cinetica del calamaro: nei mammiferi a 37 °C le fibre sono più veloci (≈ 6 m/s per µm di diametro esterno, regola di Hursh).'));
       var ro = U.readouts([{ key: 'v', label: 'Velocità di conduzione misurata', hl: true }, { key: 't', label: 'Tempo (ms)' }, { key: 'L', label: 'Lunghezza della fibra' }]);
-      var scn = F.scene3d(L.main, { height: 220, camPos: [0, 1.4, 6.2], hint: 'Trascina per ruotare' });
+      var scn = F.scene3d(L.main, { height: function (w) { return Math.round(Math.max(260, Math.min(380, w * 0.46))); }, camPos: [0, 1.7, 6.6], fov: 40, minDistance: 3, maxDistance: 20, hint: 'Trascina per ruotare · rotellina per lo zoom' });
+      var ax3 = scn ? F.axon3d(scn) : null;
       L.main.appendChild(ro.el);
       var pX = U.plot(L.main, { title: 'Vm lungo la fibra (istantanea)', xlabel: 'posizione (mm)', ylabel: 'Vm (mV)', height: 190, ylim: [-90, 50] });
       var pT = U.plot(L.main, { title: 'Vm registrato da due elettrodi', xlabel: 'tempo (ms)', ylabel: 'Vm (mV)', height: 180, ylim: [-90, 50] });
-      var THREE = G.THREE, cable, meshes = [], tmpC = THREE ? new THREE.Color() : null, rec = { t: [], a: [], b: [] }, e1, e2, cross = [null, null], vel = null;
+      var cable, rec = { t: [], a: [], b: [] }, e1, e2, cross = [null, null], vel = null;
       function build() {
         st.running = false; st.done = false;
         var nI = 16;
@@ -60,34 +53,7 @@
         if (st.type === 'myel') { var nodes = []; cable.kind.forEach(function (k2, i) { if (k2 === 'node') nodes.push(i); }); e1 = nodes[4]; e2 = nodes[12]; }
         ro.set('L', F.fmt(xs[n - 1] * 10, 1) + ' mm'); ro.set('v', '—'); ro.set('t', '0');
         rec = { t: [], a: [], b: [] }; cross = [null, null]; vel = null;
-        // geometria 3D
-        if (scn) {
-          meshes.forEach(function (m) { scn.scene.remove(m); m.geometry.dispose(); }); meshes = [];
-          var total = xs[n - 1], sc = 8 / total, rad = 0.17;
-          if (st.type === 'unmy') {
-            for (var i = 0; i < n; i += 2) {
-              var m = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, 8 / n * 2 * 1.02, 12), new THREE.MeshStandardMaterial({ color: 0x8899bb }));
-              m.rotation.z = Math.PI / 2; m.position.x = xs[i] * sc - 4; m.userData.i = i; scn.scene.add(m); meshes.push(m);
-            }
-          } else {
-            var k3 = -1;
-            for (i = 0; i < n; i++) {
-              var kind = cable.kind[i];
-              if (kind === 'node') { k3++; var nm = new THREE.Mesh(new THREE.CylinderGeometry(rad * 1.05, rad * 1.05, 0.09, 12), new THREE.MeshStandardMaterial({ color: 0x8899bb })); nm.rotation.z = Math.PI / 2; nm.position.x = xs[i] * sc - 4; nm.userData.i = i; scn.scene.add(nm); meshes.push(nm); }
-              else if (i > 0 && cable.kind[i - 1] === 'node') {
-                // un manicotto di mielina per internodo (8 segmenti)
-                var seg = 0; while (i + seg < n && cable.kind[i + seg] === 'myelin') seg++;
-                var x0 = xs[i] * sc - 4, x1 = xs[i + seg - 1] * sc - 4, demyHere = st.demy > 0.05 && k3 >= 7 && k3 <= 9, thick = demyHere ? 2.2 - 1.05 * st.demy : 2.2;
-                var sh = new THREE.Mesh(new THREE.CylinderGeometry(rad * thick, rad * thick, (x1 - x0) * 1.08, 16), new THREE.MeshStandardMaterial({ color: demyHere ? 0xc9a3a3 : 0xf2efe6, roughness: 0.8, transparent: demyHere, opacity: demyHere ? 0.75 : 1 }));
-                sh.rotation.z = Math.PI / 2; sh.position.x = (x0 + x1) / 2; sh.userData.i = i + Math.floor(seg / 2); sh.userData.myelin = !demyHere; scn.scene.add(sh); meshes.push(sh);
-              }
-            }
-          }
-          [e1, e2].forEach(function (ei, j) {
-            var pin = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.6, 8), F.mat(j ? 0xd9480f : 0x2459a8));
-            pin.position.set(xs[ei] * sc - 4, 0.6, 0); pin.rotation.z = Math.PI; scn.scene.add(pin); meshes.push(pin);
-          });
-        }
+        if (ax3) ax3.build(cable, { type: st.type, d: st.d, demy: st.type === 'myel' ? st.demy : 0, e1: e1, e2: e2 });
         draw();
       }
       function start() {
@@ -99,7 +65,7 @@
       }
       function frame(dt) {
         if (st.running) {
-          var modelPerSec = (st.type === 'myel' ? 0.6 : 2.5) * st.speed, tAdv = Math.min(dt, 0.05) * modelPerSec;
+          var modelPerSec = (st.type === 'myel' ? 0.4 : 1.6) * st.speed, tAdv = Math.min(dt, 0.05) * modelPerSec;
           var h = st.type === 'myel' ? 0.005 : 0.01, nS = Math.max(1, Math.round(tAdv / h));
           for (var s = 0; s < nS; s++) {
             st.stimIdx.forEach(function (i, j) { cable.Iext[i] = cable.t < 0.3 ? st.amp[j] : 0; });
@@ -116,7 +82,7 @@
           }
           draw();
         }
-        if (scn) meshes.forEach(function (m) { if (m.userData.i !== undefined && !m.userData.myelin) vColor(cable.V[m.userData.i], m.material.color); });
+        if (ax3) ax3.update(dt);
       }
       function draw() {
         var xmm = Array.from(cable.x).map(function (x) { return x * 10; });
@@ -163,7 +129,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { pX.dispose(); pT.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
+      return { destroy: function () { pX.dispose(); pT.dispose(); if (ax3) ax3.dispose(); if (scn) scn.dispose(); if (loop) loop.stop(); } };
     }
   });
 

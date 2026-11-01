@@ -44,11 +44,17 @@
         [yu, yd].forEach(function (y) { ctx.beginPath(); ctx.moveTo(x0 - 14, y); ctx.lineTo(x1 + 10, y); ctx.stroke(); });
         ctx.lineWidth = 1; ctx.fillStyle = css('--faint'); ctx.textAlign = 'left'; ctx.fillText('microtubuli (rotaie)', x0 - 14, cy + th / 2 + 14);
         function X(f) { return x0 + (x1 - x0) * f; }
-        function walker(x, y, col, dir, label, first) {
-          var leg = Math.sin(phase * 6 + x * 0.2) * 4;
-          ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
-          ctx.moveTo(x, y); ctx.lineTo(x - 3 + leg * dir, y + (y < cy ? 10 : -10)); ctx.moveTo(x, y); ctx.lineTo(x + 3 - leg * dir, y + (y < cy ? 10 : -10)); ctx.stroke();
-          if (first && label) { ctx.fillStyle = col; ctx.font = '600 11px ' + css('--font'); ctx.textAlign = 'center'; ctx.fillText(label, x, y + (y < cy ? -14 : 24)); ctx.font = '11px ' + css('--font'); }
+        // proteina motrice: due «piedi» che si appoggiano SUL microtubulo (railY) e si alternano; il carico sta dal lato opposto alla rotaia
+        function walker(x, railY, side, col, dir, label, first) {
+          var topY = railY + side * 4;                 // attacco del motore al carico (side = -1: carico sopra la rotaia, +1: sotto)
+          ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineCap = 'round';
+          for (var k = 0; k < 2; k++) {
+            var sw = Math.sin(phase * 7 + k * Math.PI), step = 4 * sw * dir, lift = Math.max(0, Math.cos(phase * 7 + k * Math.PI)) * 3;
+            var fx = x + (k ? 5 : -5) + step, fy = railY + side * lift;     // piede piantato (lift = 0) o sollevato di qualche px
+            ctx.beginPath(); ctx.moveTo(x, topY + side * 5); ctx.lineTo(fx, fy); ctx.stroke();
+          }
+          ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, topY + side * 5, 2.4, 0, 6.283); ctx.fill();
+          if (first && label) { ctx.fillStyle = col; ctx.font = '600 11px ' + css('--font'); ctx.textAlign = 'center'; ctx.fillText(label, x, side < 0 ? railY - 26 : railY + 36); ctx.font = '11px ' + css('--font'); }
         }
         // flusso lento: segmenti di citoscheletro e puntini di actina
         if (st.sl) cargo.sl.forEach(function (f, i) {
@@ -56,9 +62,9 @@
           ctx.fillStyle = css('--muted'); ctx.beginPath(); ctx.arc(x + 4, cy + 2 + (i % 2) * 6, 2.5, 0, 6.283); ctx.fill();
         });
         if (st.sl) { ctx.fillStyle = css('--ca'); ctx.textAlign = 'right'; ctx.fillText('giallo: citoscheletro e actina (lento)', x1 + 10, cy - th / 2 - 4); }
-        if (st.fa) cargo.va.forEach(function (f, i) { var x = X(f); walker(x, yu, css('--c1'), 1, 'chinesina', i === 0); ctx.fillStyle = css('--c1'); ctx.beginPath(); ctx.arc(x, yu - 11, 7, 0, 6.283); ctx.fill(); });
-        if (st.fr) cargo.vr.forEach(function (f, i) { var x = X(f); walker(x, yd, css('--c3'), -1, 'dineina', i === 0); ctx.fillStyle = css('--c3'); ctx.beginPath(); ctx.arc(x, yd + 11, 6, 0, 6.283); ctx.fill(); });
-        if (st.tox) cargo.tox.forEach(function (f) { var x = X(f); walker(x, yd, css('--bad'), -1, '', false); ctx.fillStyle = css('--bad'); ctx.fillRect(x - 5, yd + 6, 10, 10); });
+        if (st.fa) cargo.va.forEach(function (f, i) { var x = X(f); walker(x, yu, -1, css('--c1'), 1, 'chinesina', i === 0); ctx.fillStyle = css('--c1'); ctx.beginPath(); ctx.arc(x, yu - 16, 7, 0, 6.283); ctx.fill(); });
+        if (st.fr) cargo.vr.forEach(function (f, i) { var x = X(f); walker(x, yd, 1, css('--c3'), -1, 'dineina', i === 0); ctx.fillStyle = css('--c3'); ctx.beginPath(); ctx.arc(x, yd + 16, 6, 0, 6.283); ctx.fill(); });
+        if (st.tox) cargo.tox.forEach(function (f) { var x = X(f); walker(x, yd, 1, css('--bad'), -1, '', false); ctx.fillStyle = css('--bad'); ctx.fillRect(x - 5, yd + 11, 10, 10); });
         // frecce di direzione
         ctx.lineWidth = 1.5;
         if (st.fa) U.arrow(ctx, x0 + 10, cy - th / 2 - 22, x0 + 90, cy - th / 2 - 22, css('--c1'), 2, 9);

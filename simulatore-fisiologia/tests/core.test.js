@@ -246,3 +246,60 @@ test('Meccanocettori: Meissner ~40 Hz, Pacini ~250 Hz e più sensibile', () => {
   const dec = F.mechano('PC', ramp, { tmax: 800, decapsulated: true }).spikes.filter(s => s > 300 && s < 590).length;
   assert.ok(sa > 5 && pcH === 0 && dec > 5, 'SA lento, PC rapido, PC senza capsula lento (Loewenstein)');
 });
+
+test('Neurone completo (lezione 21): potenziali locali vs potenziale d\'azione', () => {
+  const D = { E1: 600, E2: 300, E3: 100 };
+  function sim(sites, N, o) {
+    o = o || {};
+    const c = F.Cable.neuron({ dendDiam_um: o.dd || 1, Rm: (o.Rm || 20) * 1000 }); c.reset(-65);
+    const per = 1000 / (o.freq || 200), ev = [];
+    for (const s of sites) for (let k = 0; k < (o.np || 1); k++)
+      ev.push(s === 'I' ? { i: c.somaIndex, t0: 1.5 + k * per, g: N * 0.6e-6, E: -80, tp: 1 } : { i: c.dendIndexAt(D[s]), t0: 1.5 + k * per, g: N * 0.2e-6, E: 0, tp: 0.5 });
+    const mx = new Float64Array(c.n).fill(-1e9); let nAP = 0, prev = -65, tAis = null, tSoma = null, t1 = null, t5 = null;
+    const tEnd = 1.5 + ((o.np || 1) - 1) * per + 9;
+    while (c.t < tEnd) {
+      c.applySyn(ev); c.step(0.01);
+      for (let i = 0; i < c.n; i++) if (c.V[i] > mx[i]) mx[i] = c.V[i];
+      const v = c.V[c.nodeIdx[0]]; if (prev < 0 && v >= 0) nAP++; prev = v;
+      if (tAis === null && c.V[c.aisIndex + 3] > 0) tAis = c.t; if (tSoma === null && c.V[c.somaIndex] > 0) tSoma = c.t;
+      if (t1 === null && c.V[c.nodeIdx[0]] > 0) t1 = c.t; if (t5 === null && c.V[c.nodeIdx[4]] > 0) t5 = c.t;
+    }
+    return { c, mx, nAP, tAis, tSoma, t1, t5, nodes: c.nodeIdx.map(i => mx[i]) };
+  }
+  // riposo stabile
+  const c0 = F.Cable.neuron(); c0.reset(-65); for (let k = 0; k < 500; k++) c0.step(0.01);
+  for (let i = 0; i < c0.n; i++) near(c0.V[i], -65, 0.3, 'riposo del compartimento ' + i);
+  near(c0.lambda_um, 707, 1, 'λ = √(Rm·d/4Ri) con Rm = 20 kΩ·cm², d = 1 µm, Ri = 100 Ω·cm');
+  // potenziale locale: graduato e decrementale (stesso gruppo di sinapsi più lontano → molto meno al soma)
+  const far = sim(['E1'], 25), near3 = sim(['E3'], 6);
+  assert.equal(far.nAP, 0, 'sottosoglia: nessun PdA');
+  assert.ok(far.mx[far.c.dendIndexAt(600)] > -45, 'potenziale locale ampio al sito (> 20 mV)');
+  assert.ok(far.mx[far.c.somaIndex] - -65 < 0.3 * (far.mx[far.c.dendIndexAt(600)] - -65), 'al soma meno del 30% dell\'ampiezza locale');
+  assert.equal(near3.nAP, 0);
+  // sommazione spaziale: ogni gruppo da solo è sottosoglia, insieme scatta
+  ['E1', 'E2', 'E3'].forEach(s => assert.equal(sim([s], 6).nAP, 0, s + ' da solo è sottosoglia'));
+  const sum3 = sim(['E1', 'E2', 'E3'], 6);
+  assert.equal(sum3.nAP, 1, 'sommazione spaziale → PdA');
+  // il PdA nasce nel segmento iniziale (prima del soma e del primo nodo) e ha ampiezza costante lungo i nodi
+  assert.ok(sum3.tAis < sum3.tSoma && sum3.tAis <= sum3.t1, 'innesco al segmento iniziale');
+  assert.ok(Math.max(...sum3.nodes) - Math.min(...sum3.nodes) < 4, 'ampiezza costante ai nodi (±2 mV)');
+  between(sum3.nodes[0], 20, 40, 'picco del PdA ai nodi');
+  const vel = (sum3.c.x[sum3.c.nodeIdx[4]] - sum3.c.x[sum3.c.nodeIdx[0]]) / (sum3.t5 - sum3.t1) * 10;
+  between(vel, 4, 12, 'velocità di conduzione (m/s)');
+  // tutto-o-nulla: sinapsi 2× più forti → stessa ampiezza ai nodi
+  const a20 = sim(['E3'], 20), a40 = sim(['E3'], 40);
+  assert.equal(a20.nAP, 1); assert.equal(a40.nAP, 1);
+  near(a40.nodes[2], a20.nodes[2], 2, 'ampiezza ai nodi con N = 20 e N = 40');
+  // sommazione temporale
+  assert.equal(sim(['E3'], 5).nAP, 0, 'un impulso non basta');
+  assert.equal(sim(['E3'], 5, { np: 5, freq: 400 }).nAP, 1, '5 impulsi a 400 Hz scattano');
+  // inibizione sul soma annulla la somma
+  assert.equal(sim(['E1', 'E2', 'E3'], 10).nAP, 1);
+  assert.equal(sim(['E1', 'E2', 'E3', 'I'], 10).nAP, 0, 'IPSP porta il neurone sottosoglia');
+  // refrattarietà: 5 impulsi a 500 Hz non danno 5 PdA
+  assert.ok(sim(['E3'], 20, { np: 5, freq: 500 }).nAP < 5, 'refrattarietà');
+  // dendrite più sottile: λ minore → meno al soma
+  const thin = sim(['E1'], 25, { dd: 0.5 });
+  assert.ok(thin.mx[thin.c.somaIndex] < far.mx[far.c.somaIndex], 'dendrite sottile: ampiezza al soma minore');
+  near(thin.c.lambda_um / far.c.lambda_um, Math.sqrt(0.5), 0.01, 'λ ∝ √d');
+});

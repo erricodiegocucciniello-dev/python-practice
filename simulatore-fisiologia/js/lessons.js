@@ -680,6 +680,9 @@
         { label: 'Decremento del potenziale locale', tex: 'V(x) = V_0\\,e^{-x/\\lambda},\\qquad \\lambda = \\sqrt{\\frac{R_m\\,d}{4R_i}}' }
       ],
       sims: [
+        { id: 'neurone', title: 'Dal potenziale locale al potenziale d\'azione: il neurone', preset: {},
+          predict: { q: "Tre sinapsi eccitatorie sul dendrite sono ciascuna sottosoglia. Attivate insieme, il neurone…", options: ["può raggiungere la soglia al segmento iniziale: i potenziali locali si sommano", "non può mai scaricare, perché ogni potenziale locale si spegne da solo", "scarica sempre tre potenziali d'azione, uno per sinapsi"], answer: 0, why: "I potenziali locali sono graduati e sommabili nello spazio e nel tempo: se la somma al segmento iniziale supera la soglia, nasce un PdA tutto-o-nulla." },
+          observe: "nel grafico in basso la curva scende nel dendrite (potenziale locale, decremento) e poi resta alla stessa altezza in tutti i nodi (PdA, nessun decremento)." },
         { id: 'cavo', preset: { d: 2 },
           predict: { q: "Raddoppiando il diametro di un dendrite, la costante di spazio λ…", options: ["raddoppia", "aumenta di circa 1,4 volte (√2)", "si dimezza"], answer: 1, why: "λ ∝ √d: il potenziale locale arriva un po' più lontano." },
           observe: "a λ (37%) il potenziale si è già ridotto di due terzi; nelle registrazioni a distanza il PPS è più piccolo e più lento." },
