@@ -15,7 +15,7 @@ Per averlo online (anche dal telefono) puoi pubblicare la cartella con GitHub Pa
   - i simulatori **già impostati** sul concetto della lezione, ciascuno preceduto da una domanda "Prevedi prima di provare";
   - le note **Attenzione** dove una slide contiene un errore, con il valore corretto;
   - un quiz di verifica con spiegazioni e i collegamenti alle lezioni correlate.
-- **Per argomento**: i 40 simulatori raggruppati in 9 sezioni. Ogni simulatore indica in quali lezioni compare.
+- **Per argomento**: i 41 simulatori raggruppati in 9 sezioni. Ogni simulatore indica in quali lezioni compare.
 
 | Sezione | Lezioni | Simulatori |
 |---|---|---|
@@ -24,7 +24,7 @@ Per averlo online (anche dal telefono) puoi pubblicare la cartella con GitHub Pa
 | Flussi e osmosi | 6–9 | diffusione (Fick), t ∝ x², permeabilità e Renkin, eritrocita 3D, osmometro |
 | Canali e trasporti | 9–12 | canali 3D (Nav, Kv, K2P, Kir, nAChR, AQP1), curve I-V, cellula β, carrier, pompa Na⁺/K⁺ 3D, SGLT1 |
 | Potenziale di membrana | 13–15 | Nernst dal vivo, Donnan, Goldman-Hodgkin-Katz, circuito equivalente |
-| Elettrofisiologia e PdA | 16–21, 28 | current clamp, voltage clamp, patch clamp, Hodgkin-Huxley, treni di impulsi (Connor-Stevens), propagazione 3D, cavo |
+| Elettrofisiologia e PdA | 16–21, 28 | current clamp, voltage clamp, patch clamp, Hodgkin-Huxley, treni di impulsi (Connor-Stevens), propagazione 3D, cavo, flusso assonico (chinesina e dineina) |
 | Sinapsi | 22–26 | elettrica/chimica, sinapsi 3D, PPS e inversione, farmaci monoaminergici, placca motrice, integrazione |
 | Somatosensoriale | 29 | meccanocettori, discriminazione di due punti |
 | Rene | 30 | glomerulo (Starling), nefrone e ADH, bilancio idrico |
@@ -102,7 +102,7 @@ index.html                 pagina unica (apribile con doppio clic)
 css/style.css              stile, tema chiaro/scuro
 js/core/                   motore numerico (funziona anche in Node per i test)
 js/ui/                     componenti, grafici, scene 3D, riquadro di spiegazione (explain.js)
-js/sims/                   i 40 simulatori
+js/sims/                   i 41 simulatori
 js/lessons.js              contenuti delle 31 lezioni
 js/lessons-prof.js         riquadri «Detto a lezione» (ciò che la prof sottolinea, lezioni 1–13)
 js/quiz/                   prove d'esame: motore, pagina, archivio di domande, domande calcolate

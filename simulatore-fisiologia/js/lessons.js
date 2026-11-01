@@ -84,7 +84,7 @@
         "Reazioni accoppiate: l'energia libera della reazione esoergonica deve diminuire più di quanto aumenti quella della endoergonica (somma dei ΔG < 0).",
         "Intermedi ad alta energia: X-P trasferisce il fosfato al reagente (fosforilazione), che diventa più reattivo.",
         "Idrolisi dell'ATP: $\\Delta G^{\\circ\\prime} = -30{,}5$ kJ/mol (−7,3 kcal/mol); nella cellula, con ATP alto e ADP basso, circa −50/−55 kJ/mol.",
-        "L'ATP alimenta il lavoro meccanico (proteine motrici), di trasporto (pompe) e chimico (biosintesi). Il catabolismo rigenera ATP da ADP + Pᵢ.",
+        "L'ATP alimenta il lavoro meccanico (proteine motrici: la slide mostra l'ATP che fosforila le proteine motrici; a lezione l'esempio è il muscolo, con actina e miosina; nella lezione 21 chinesina e dineina sui microtubuli), di trasporto (pompe) e chimico (biosintesi). Il catabolismo rigenera ATP da ADP + Pᵢ.",
         "Ossidazione del glucosio: $C_6H_{12}O_6 + 6\\,O_2 \\to 6\\,CO_2 + 6\\,H_2O$, $\\Delta G^{\\circ\\prime} \\approx -2870$ kJ/mol (−686 kcal/mol).",
         "Nutrienti: glucidi (→ monosaccaridi), lipidi (→ acidi grassi e glicerolo), protidi (→ aminoacidi); digestione, assorbimento, trasporto, metabolismo."
       ],
@@ -674,7 +674,7 @@
         "Potenziali propagati: solo nelle membrane eccitabili; transitori, rapidissimi, ampiezza invariabile, non sommabili, refrattari.",
         "Potenziali locali: graduati, sommabili (nello spazio e nel tempo), senza refrattarietà, si estinguono a breve distanza (costante di spazio λ); possono depolarizzare o iperpolarizzare.",
         "Neuroni afferenti (bipolari e a T), efferenti (Golgi tipo I, assone lungo: motoneuroni, piramidali), interneuroni (tipo II, circa il 99%).",
-        "Flusso assonico: rapido (anterogrado con chinesina, retrogrado con dineina: fattori neurotrofici, virus, tossine) e lento (citoscheletro, proteine solubili). Glia: astrociti, oligodendrociti, cellule di Schwann, microglia."
+        "<b>Flusso assonico</b>: il soma (nucleo, mitocondri, ribosomi) rifornisce di proteine tutto il neurone; dendriti e neurite hanno solo microtubuli e neurofilamenti. <b>Rapido</b> (anterogrado e retrogrado): vescicole e organelli; la componente retrograda porta al nucleo i fattori neurotrofici assunti per endocitosi dalle terminazioni (rigenerazione delle fibre) e muove virus e tossine. Meccanismo: proteine motrici come <b>chinesina</b> e <b>dineina</b> che camminano sui microtubuli. <b>Lento</b> (probabilmente solo anterogrado): materiale non delimitato da membrane, soprattutto citoscheletro con proteine solubili come l'actina; coinvolge una proteina motrice come la dineina. Glia: astrociti, oligodendrociti, cellule di Schwann, microglia."
       ],
       formulas: [
         { label: 'Decremento del potenziale locale', tex: 'V(x) = V_0\\,e^{-x/\\lambda},\\qquad \\lambda = \\sqrt{\\frac{R_m\\,d}{4R_i}}' }
@@ -684,12 +684,17 @@
           predict: { q: "Raddoppiando il diametro di un dendrite, la costante di spazio λ…", options: ["raddoppia", "aumenta di circa 1,4 volte (√2)", "si dimezza"], answer: 1, why: "λ ∝ √d: il potenziale locale arriva un po' più lontano." },
           observe: "a λ (37%) il potenziale si è già ridotto di due terzi; nelle registrazioni a distanza il PPS è più piccolo e più lento." },
         { id: 'propagazione', title: 'Il PdA invece non si attenua', preset: { type: 'unmy', d: 10 },
-          observe: "confronta i due elettrodi: il PdA arriva al secondo con la stessa ampiezza." }
+          observe: "confronta i due elettrodi: il PdA arriva al secondo con la stessa ampiezza." },
+        { id: 'flussoassonico', title: 'Il flusso assonico: le proteine motrici', preset: {},
+          predict: { q: "Quale materiale porta al nucleo la componente retrograda del flusso assonico rapido?", options: ["fattori neurotrofici assunti per endocitosi, e anche virus e tossine", "vescicole di neurotrasmettitore appena sintetizzate nel soma", "ribosomi e RNA messaggero per la sintesi proteica"], answer: 0, why: "La slide: la componente retrograda rapida convoglia al nucleo i fattori neurotrofici assunti dalle terminazioni (ruolo cruciale nella rigenerazione) e muove anche virus e tossine neurotossiche." },
+          observe: "accendi i flussi uno alla volta: i motori (chinesina, dineina) camminano sui microtubuli; il flusso lento trasporta citoscheletro e actina ed è molto più lento." }
       ],
-      warn: ["La slide attribuisce alla <b>dineina</b> il flusso assonico lento, che è anterogrado. La dineina è il motore <b>retrogrado</b> (verso il soma). Il trasporto anterogrado, sia rapido sia lento (\"stop and go\"), avviene soprattutto grazie alla <b>chinesina</b>."],
+      info: ["Dalle slide: kinesina e dineina sono citate insieme per il flusso <b>rapido</b>, la sola dineina per il flusso <b>lento</b>. La slide non scrive il verso di ciascun motore. Nei testi di biologia cellulare la <b>chinesina</b> cammina verso l'estremità + dei microtubuli (la periferia, quindi anterogrado) e la <b>dineina</b> verso l'estremità − (il soma, quindi retrogrado): è un'aggiunta rispetto alla slide, utile per orientarsi."],
       quiz: [
         { q: "Quale caratteristica appartiene ai potenziali locali?", options: ["Tutto-o-nulla", "Sommabilità", "Refrattarietà"], answer: 1, why: "I potenziali locali si sommano nello spazio e nel tempo." },
-        { q: "Il trasporto retrogrado dei fattori neurotrofici verso il soma usa…", options: ["la chinesina", "la dineina", "la miosina"], answer: 1, why: "La dineina cammina verso l'estremità \"meno\" dei microtubuli, cioè verso il soma." }
+        { q: "Il trasporto retrogrado dei fattori neurotrofici verso il soma usa…", options: ["la chinesina", "la dineina", "la miosina"], answer: 1, why: "La slide cita chinesina e dineina per il flusso rapido; per convenzione la dineina cammina verso l'estremità meno dei microtubuli, cioè verso il soma." },
+        { q: "Il flusso assonico lento trasporta soprattutto…", options: ["materiale non delimitato da membrane, come elementi del citoscheletro e actina", "vescicole e organelli delimitati da membrana", "fattori neurotrofici assunti per endocitosi"], answer: 0, why: "Il flusso lento è probabilmente solo anterogrado; le vescicole e gli organelli viaggiano nel flusso rapido." },
+        { q: "Su quali strutture camminano le proteine motrici del flusso assonico?", options: ["sui microtubuli del citoscheletro", "sui filamenti di miosina", "sulla membrana plasmatica dell'assone"], answer: 0, why: "Chinesina e dineina camminano sui microtubuli; dendriti e neurite sono ricchi solo di microtubuli e neurofilamenti." }
       ],
       related: ['20', '26', '22']
     },
