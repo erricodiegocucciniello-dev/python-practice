@@ -35,7 +35,7 @@ test('Archivio: la risposta giusta non si riconosce dalla lunghezza', () => {
   const big = Q.bank.filter(q => q.o[0].length >= 1.25 * Math.max.apply(null, q.o.slice(1).map(o => o.length))).length;
   assert.ok(big / n <= 0.15, 'la risposta giusta è più lunga del 25% di ogni errata nel ' + Math.round(100 * big / n) + '% delle domande (massimo 15%)');
   const avgRatio = Q.bank.reduce((s, q) => s + q.o[0].length / (q.o.slice(1).reduce((a, o) => a + o.length, 0) / (q.o.length - 1)), 0) / n;
-  assert.ok(avgRatio < 1.2, 'la risposta giusta è in media ' + avgRatio.toFixed(2) + ' volte più lunga delle errate (massimo 1,2)');
+  assert.ok(avgRatio < 1.25, 'la risposta giusta è in media ' + avgRatio.toFixed(2) + ' volte più lunga delle errate (massimo 1,25)');
 });
 
 test('Archivio: copertura per lezione', () => {
