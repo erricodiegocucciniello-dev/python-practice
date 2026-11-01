@@ -31,7 +31,7 @@ if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
   if (unknown.length) failures.push('Simulatori citati ma non registrati: ' + unknown.join(', '));
   console.log(`Lezioni: ${lessons.length}, simulatori: ${sims.length}`);
 
-  const routes = [{ r: 'inizio', name: 'home' }]
+  const routes = [{ r: 'inizio', name: 'home' }, { r: 'prova', name: 'prova' }]
     .concat(lessons.map(l => ({ r: 'lezione-' + l.id, name: 'lezione_' + l.id })))
     .concat(sims.map(s => ({ r: 'sim-' + s, name: 'sim_' + s })));
 
@@ -93,6 +93,95 @@ if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
     if (!ok) failures.push(r + ': ' + res.bad.join('; '));
     if (shotDir) await page.screenshot({ path: path.join(shotDir, name + '.png'), fullPage: true });
   }
+
+  // ---- prova d'esame: svolgimento, storico, errori frequenti, ripresa, scadenza, esporta/importa, domande aggiunte
+  {
+    errors = [];
+    const step = async (name, fn) => { try { await fn(); } catch (e) { failures.push('prova d\'esame — ' + name + ': ' + e.message.split('\n')[0]); console.log('ERR prova d\'esame — ' + name + ': ' + e.message.split('\n')[0]); } };
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(url + '#inizio'); await page.evaluate(() => { try { localStorage.removeItem('fisio-quiz-v1'); } catch (e) { /* niente */ } });
+    await page.goto(url + '#prova'); await page.waitForTimeout(400);
+    await step('tre prove e «sui miei errori» disattivato all\'inizio', async () => {
+      const n = await page.$$eval('.pcard', c => c.length); if (n !== 3) throw new Error(n + ' schede invece di 3');
+      const dis = await page.$$eval('.pcard .btn:not(.primary)', b => b.map(x => x.disabled)); if (!dis.every(Boolean)) throw new Error('«Sui miei errori» dovrebbe essere disattivato');
+    });
+    await step('simulazione del primo intercorso', async () => {
+      await page.click('.pcard:nth-child(1) .btn.primary'); await page.waitForTimeout(300);
+      const n = await page.$$eval('.pdot', d => d.length); if (n !== 15) throw new Error(n + ' domande invece di 15');
+      const t = await page.$eval('.ptimer', e => e.textContent); if (!/29:|30:/.test(t)) throw new Error('timer: ' + t);
+      for (let i = 0; i < n; i++) { await page.keyboard.press(['a', 'b', 'c', 'd'][i % 4]); if (i === 3) await page.keyboard.press('f'); if (i < n - 1) await page.keyboard.press('ArrowRight'); }
+      const done = await page.$$eval('.pdot.done', d => d.length); if (done !== 15) throw new Error('risposte date: ' + done);
+      await page.click('.pnav button:text-is("Consegna")'); await page.click('button:text-is("Sì, consegna")'); await page.waitForTimeout(300);
+      const sc = await page.$eval('.pscore-n', e => e.textContent); if (!/^\d+ \/ 15$/.test(sc)) throw new Error('punteggio: ' + sc);
+      const corr = await page.$$eval('.pc', c => c.length); if (corr !== 15) throw new Error('correzioni: ' + corr);
+      const bad = await page.$eval('.prova', e => /NaN|undefined/.test(e.innerText)); if (bad) throw new Error('NaN o undefined nella correzione');
+    });
+    await step('storico e «sui miei errori» attivo', async () => {
+      await page.click('button:text-is("Torna alle prove")'); await page.waitForTimeout(300);
+      const rows = await page.$$eval('.ptable tbody tr', r => r.length); if (rows !== 1) throw new Error('righe di storico: ' + rows);
+      const dis = await page.$eval('.pcard:nth-child(1) .btn:not(.primary)', b => b.disabled); if (dis) throw new Error('«Sui miei errori» ancora disattivato');
+      const dis2 = await page.$eval('.pcard:nth-child(2) .btn:not(.primary)', b => b.disabled); if (!dis2) throw new Error('«Sui miei errori» del secondo intercorso dovrebbe restare disattivato (nessun dato in quelle lezioni)');
+    });
+    await step('prova sui miei errori', async () => {
+      await page.click('.pcard:nth-child(1) .btn:not(.primary)'); await page.waitForTimeout(300);
+      const comp = await page.$$eval('.prova p.small', p => p.map(x => x.textContent).join(' ')); if (!/Composizione/.test(comp)) throw new Error('manca la composizione della prova');
+      const n = await page.$$eval('.pdot', d => d.length);
+      for (let i = 0; i < n; i++) { await page.keyboard.press('a'); if (i < n - 1) await page.keyboard.press('ArrowRight'); }
+      await page.click('.pnav button:text-is("Consegna")'); await page.click('button:text-is("Sì, consegna")'); await page.waitForTimeout(300);
+      await page.click('button:has-text("Rifai solo le sbagliate")'); await page.waitForTimeout(300);
+      const train = await page.$$eval('.pdot', d => d.length); if (!train) throw new Error('nessuna domanda da rifare');
+      await page.keyboard.press('a'); await page.waitForTimeout(150);
+      const fb = await page.$$eval('.pq .feedback', f => f.length); if (!fb) throw new Error('in «rifai» la correzione dovrebbe comparire subito');
+      await page.goto(url + '#inizio'); await page.goto(url + '#prova'); await page.waitForTimeout(300);
+    });
+    await step('ripresa di una prova in corso e scadenza del tempo', async () => {
+      const banner = await page.$('.presume, .note.info .btn'); if (!banner) throw new Error('manca il riquadro «prova in corso»');
+      await page.click('button:text-is("Riprendi")'); await page.waitForTimeout(300);
+      await page.evaluate(() => { const r = Fisio.quiz.data.run; r.startTs = Date.now() - 3 * 3600 * 1000; r.minutes = 30; Fisio.quiz.save(); });
+      await page.goto(url + '#inizio'); await page.goto(url + '#prova'); await page.waitForTimeout(300);
+      await page.click('button:text-is("Riprendi")'); await page.waitForTimeout(400);
+      const note = await page.$eval('.prova', e => /Tempo scaduto/.test(e.innerText)); if (!note) throw new Error('la prova scaduta non è stata consegnata da sola');
+      await page.click('button:text-is("Torna alle prove")'); await page.waitForTimeout(200);
+    });
+    await step('i dati restano dopo il ricaricamento', async () => {
+      await page.reload(); await page.waitForTimeout(500);
+      const rows = await page.$$eval('.ptable tbody tr', r => r.length); if (rows < 2) throw new Error('righe dopo il ricaricamento: ' + rows);
+    });
+    await step('esporta e importa senza duplicati', async () => {
+      const before = await page.evaluate(() => Fisio.quiz.data.attempts.length);
+      const txt = await page.evaluate(() => Fisio.quiz.exportJSON());
+      await page.fill('.ptext[aria-label="Testo da importare"]', txt); await page.click('button:text-is("Importa dal testo")'); await page.waitForTimeout(300);
+      const msg = await page.$eval('.pdata .pmsg', e => e.textContent); if (!/Importati 0 tentativi/.test(msg)) throw new Error('messaggio: ' + msg);
+      await page.waitForTimeout(1100);
+      const after = await page.evaluate(() => Fisio.quiz.data.attempts.length); if (after !== before) throw new Error('duplicati: ' + before + ' → ' + after);
+      await page.fill('.ptext[aria-label="Testo da importare"]', 'non json'); await page.click('button:text-is("Importa dal testo")');
+      const m2 = await page.$eval('.pdata .pmsg', e => e.textContent); if (!/JSON|esportato|valido/.test(m2)) throw new Error('nessun errore per un testo non valido: ' + m2);
+    });
+    await step('aggiungere domande con il modulo', async () => {
+      await page.click('.padd summary'); await page.waitForTimeout(150);
+      const prompt = await page.$eval('.padd textarea[readonly]', e => e.value); if (!/JSON/.test(prompt)) throw new Error('prompt non presente');
+      const ok = JSON.stringify([{ l: '13', t: 'Nernst', q: 'Se [K⁺] esterno aumenta e quello interno resta uguale, E_K come cambia?', o: ['Diventa meno negativo', 'Diventa più negativo', 'Non cambia', 'Cambia segno sempre'], w: 'E_K = 61·log([K]o/[K]i): più K⁺ fuori, meno negativo.' }, { l: '99', q: 'domanda con lezione sbagliata?', o: ['a', 'b', 'c', 'd'] }]);
+      await page.fill('.padd textarea[aria-label="Domande da aggiungere"]', ok); await page.click('.padd button:text-is("Controlla")'); await page.waitForTimeout(200);
+      const rep = await page.$$eval('.preport .prep', r => r.map(x => x.className)); if (rep.length !== 2 || !/ok/.test(rep[0]) || !/bad/.test(rep[1])) throw new Error('esito: ' + rep.join(','));
+      await page.click('.padd button:text-is("Salva le domande valide")'); await page.waitForTimeout(1200);
+      const n = await page.evaluate(() => Fisio.quiz.userBank.length); if (n !== 1) throw new Error('domande aggiunte: ' + n);
+      const inPool = await page.evaluate(() => Fisio.quiz.pool('13', '13').some(e => e.user)); if (!inPool) throw new Error('la domanda aggiunta non entra nelle prove');
+    });
+    await step('azzera lo storico', async () => {
+      await page.click('button:text-is("Azzera lo storico")'); await page.click('button:text-is("Sì, cancella")'); await page.waitForTimeout(300);
+      const rows = await page.$$eval('.ptable tbody tr', r => r.length); if (rows !== 0) throw new Error('storico non azzerato');
+    });
+    await step('impostazioni: numero di domande e intervallo', async () => {
+      await page.click('.psettings summary'); await page.fill('.prow:nth-child(1) input[type="number"]', '5'); await page.dispatchEvent('.prow:nth-child(1) input[type="number"]', 'change'); await page.waitForTimeout(200);
+      await page.reload(); await page.waitForTimeout(400);
+      const t = await page.$eval('.pcard:nth-child(1) p:nth-of-type(1)', e => e.textContent); if (!/5 domande/.test(t)) throw new Error('impostazione non salvata: ' + t);
+      await page.evaluate(() => { localStorage.removeItem('fisio-quiz-v1'); });
+    });
+    const realErr = errors.filter(e => !/GPU stall|GL Driver|WebGL/i.test(e));
+    if (realErr.length) failures.push('prova d\'esame — errori JS: ' + realErr.slice(0, 3).join(' | '));
+    console.log(failures.some(f => f.indexOf('prova d\'esame') === 0) ? 'ERR scenario della prova d\'esame' : 'OK  scenario della prova d\'esame (svolgimento, storico, errori, ripresa, scadenza, esporta/importa, domande aggiunte)');
+  }
+
   // prova del tema scuro
   await page.goto(url + '#lezione-19');
   await page.click('#themeBtn');
