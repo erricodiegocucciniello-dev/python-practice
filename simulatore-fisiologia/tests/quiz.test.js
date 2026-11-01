@@ -170,3 +170,18 @@ test('Generatori: le risposte giuste coincidono con il motore (Nernst, Michaelis
   // Poisson: frazione di fallimenti = e^-m
   for (let seed = 1; seed <= 20; seed++) { const p = g('poisson-fallimenti').make(Q.rng(seed)), m = parseInt(p.q.match(/m = (\d)/)[1]); assert.strictEqual(parseInt(p.o[0].match(/(\d+)%/)[1]), Math.round(Math.exp(-m) * 100)); }
 });
+
+test('Domande segnalate: si segnalano, si tolgono e viaggiano con esporta/importa', () => {
+  Q.data.flagged = [];
+  const it = Q.instantiate(Q.bank[5], Q.rng(1));
+  assert.strictEqual(Q.toggleFlag(it), true);
+  assert.strictEqual(Q.isFlagged(it), true);
+  const txt = Q.exportJSON();
+  Q.data.flagged = [];
+  Q.importJSON(txt);
+  assert.strictEqual(Q.data.flagged.length, 1);
+  Q.importJSON(txt);
+  assert.strictEqual(Q.data.flagged.length, 1, 'nessun duplicato');
+  assert.strictEqual(Q.toggleFlag(it), false);
+  assert.strictEqual(Q.data.flagged.length, 0);
+});

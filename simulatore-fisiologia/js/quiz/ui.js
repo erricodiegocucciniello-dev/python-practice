@@ -218,6 +218,16 @@
           wrap.appendChild(ul);
         }
       }
+      if ((Q.data.flagged || []).length) {
+        wrap.appendChild(el('h3', { class: 'section-title', text: 'Domande segnalate come dubbie (' + Q.data.flagged.length + ')' }));
+        wrap.appendChild(el('p', { class: 'small', text: 'Hai segnalato queste domande perché la risposta o il testo non ti convincono. Confrontale con le slide o chiedi alla prof; se ne trovi una sbagliata puoi correggerla nel file dell\'archivio (vedi il README). Le segnalazioni sono incluse nell\'esportazione.' }));
+        var fl = el('ul', { class: 'pworst' });
+        Q.data.flagged.forEach(function (f, k) {
+          var li = el('li', null, [setText(el('span', { class: 'pw-q' }), f.q), el('div', { class: 'small', text: 'Risposta indicata come giusta: ' + (f.o && f.o[f.c] !== undefined ? f.o[f.c] : '—') + ' · lezione ' + Q.lessonNum(f.l) + ' · ' }), el('span', null, [U.button('Togli la segnalazione', function () { Q.data.flagged.splice(k, 1); Q.save(); render(); })])]);
+          fl.appendChild(li);
+        });
+        wrap.appendChild(fl);
+      }
       wrap.appendChild(dataBox());
       return wrap;
     }
@@ -509,6 +519,8 @@
           });
           box.appendChild(ul);
           if (it.w) box.appendChild(setText(el('div', { class: 'pc-w' }), '<b>Perché:</b> ' + it.w, it.user));
+          var fb = U.button(Q.isFlagged(it) ? '⚑ Segnalata come dubbia (clic per togliere)' : '⚐ Segnala come dubbia', function () { var on = Q.toggleFlag(it); fb.textContent = on ? '⚑ Segnalata come dubbia (clic per togliere)' : '⚐ Segnala come dubbia'; });
+          fb.className += ' btn-flag'; box.appendChild(fb);
           list.appendChild(box);
         });
         if (!list.children.length) list.appendChild(el('p', { class: 'small', text: 'Nessuna domanda in questa categoria.' }));

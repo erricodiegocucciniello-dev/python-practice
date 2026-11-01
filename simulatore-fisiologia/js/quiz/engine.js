@@ -88,6 +88,7 @@
       },
       attempts: [],
       user: [],
+      flagged: [],      // domande segnalate come dubbie: [{id, l, q, o, c, w, ts, note}]
       run: null
     };
   }
@@ -108,6 +109,7 @@
           }
           d.attempts = Array.isArray(p.attempts) ? p.attempts : [];
           d.user = Array.isArray(p.user) ? p.user : [];
+          d.flagged = Array.isArray(p.flagged) ? p.flagged : [];
           d.run = p.run || null;
         }
       } catch (e) { /* dati rovinati: si riparte da zero senza bloccare il sito */ }
@@ -339,7 +341,7 @@
   Q.exportJSON = function () {
     return JSON.stringify({
       app: 'fisiologia-prove', v: 1, exportedAt: new Date().toISOString(),
-      settings: Q.data.settings, attempts: Q.data.attempts, user: Q.data.user
+      settings: Q.data.settings, attempts: Q.data.attempts, user: Q.data.user, flagged: Q.data.flagged
     }, null, 1);
   };
   /** Unisce un file esportato con i dati attuali (senza duplicare i tentativi). Restituisce un riassunto. */
@@ -359,6 +361,9 @@
       var id = u.id || ('u' + Q.hash(v.q.l + '|' + v.q.q));
       if (!haveU[id]) { Q.data.user.push({ id: id, l: v.q.l, t: v.q.t, q: v.q.q, o: v.q.o, w: v.q.w }); haveU[id] = 1; addedU++; }
     });
+    Q.data.flagged = Q.data.flagged || [];
+    var haveF = {}; Q.data.flagged.forEach(function (f) { haveF[f.id + '|' + f.q] = 1; });
+    (p.flagged || []).forEach(function (f) { if (f && f.q && Array.isArray(f.o) && !haveF[f.id + '|' + f.q]) { Q.data.flagged.push(f); haveF[f.id + '|' + f.q] = 1; } });
     Q.rebuildStats(); Q.mergeUserQuestions(); Q.save();
     return { attempts: addedA, user: addedU, total: Q.data.attempts.length };
   };
@@ -387,6 +392,17 @@
   };
   Q.clearUserQuestions = function () { Q.data.user = []; Q.mergeUserQuestions(); Q.save(); };
   Q.resetHistory = function () { Q.data.attempts = []; Q.data.run = null; Q.rebuildStats(); Q.save(); };
+
+  // ------------------------------------------------------------------ domande segnalate come dubbie
+  /** Segnala (o toglie la segnalazione a) una domanda vista in una prova: si salva il testo com'era, con la risposta giusta. */
+  Q.toggleFlag = function (it) {
+    var i = -1; Q.data.flagged = Q.data.flagged || [];
+    Q.data.flagged.forEach(function (f, k) { if (f.id === it.id && f.q === it.q) i = k; });
+    if (i >= 0) { Q.data.flagged.splice(i, 1); Q.save(); return false; }
+    Q.data.flagged.push({ id: it.id, l: it.l, t: it.t || '', q: it.q, o: it.o, c: it.c, w: it.w || '', ts: Date.now() });
+    Q.save(); return true;
+  };
+  Q.isFlagged = function (it) { return (Q.data.flagged || []).some(function (f) { return f.id === it.id && f.q === it.q; }); };
 
   // ------------------------------------------------------------------ prova in corso (per riprenderla dopo un aggiornamento della pagina)
   Q.saveRun = function (test) { Q.data.run = test; Q.save(); };
