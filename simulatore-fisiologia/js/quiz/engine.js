@@ -3,7 +3,7 @@
 
    Una domanda ha: l (id della lezione), t (argomento), q (testo), o (opzioni: LA PRIMA È LA GIUSTA,
    le opzioni vengono rimescolate a ogni prova), w (spiegazione), s (fonte: 'slide', 'prof', 'user'),
-   d (difficoltà 1–3, facoltativa). */
+   d (difficoltà 1–3, facoltativa), p (0 = nessun legame con le trascrizioni; 1 = argomento trattato a lezione; 2 = la prof ha detto esplicitamente che è d'esame, un errore frequente o un trabocchetto). */
 (function (G) {
   'use strict';
   var F = G.Fisio = G.Fisio || {}, Q = F.quiz = F.quiz || {};
@@ -58,7 +58,7 @@
 
   /** Aggiunge una domanda. opt: {s: fonte, d: difficoltà, p: 1 se la prof ne ha parlato in modo esplicito}. */
   Q.add = function (l, t, q, o, w, opt) {
-    var item = { l: l, t: t, q: q, o: o, w: w || '', s: (opt && opt.s) || 'slide', d: (opt && opt.d) || 2, p: opt && opt.p ? 1 : 0 };
+    var item = { l: l, t: t, q: q, o: o, w: w || '', s: (opt && opt.s) || 'slide', d: (opt && opt.d) || 2, p: (opt && opt.p) || 0 };
     item.id = 'q' + Q.hash(l + '|' + q);
     if (knownIds[item.id]) throw new Error('Domanda duplicata (' + l + '): ' + q.slice(0, 60));
     knownIds[item.id] = 1;
@@ -264,7 +264,7 @@
     var src = e.gen ? e.make(rng) : e, opts = src.o.slice(), correct = src.o[0], shuffled = Q.shuffle(opts, rng);
     return {
       id: e.id, l: e.l, t: e.t, q: src.q, o: shuffled, c: shuffled.indexOf(correct),
-      w: src.w || '', s: e.s, d: e.d || 2, p: e.p ? 1 : 0, gen: e.gen ? 1 : 0, user: e.user ? 1 : 0
+      w: src.w || '', s: e.s, d: e.d || 2, p: e.p || 0, gen: e.gen ? 1 : 0, user: e.user ? 1 : 0
     };
   };
 

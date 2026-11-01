@@ -44,7 +44,7 @@ Durante la prova: timer, pallini per saltare tra le domande, «segna per riveder
 
 ### Le domande
 
-- `js/quiz/bank-*.js`: l'archivio incluso (circa 330 domande su tutte le lezioni), scritto dalle slide e, per le prime lezioni, tenendo conto di ciò che la prof sottolinea a lezione. Ogni domanda ha la fonte (lezione), una spiegazione e, se la prof ne ha parlato, il segno «detto a lezione».
+- `js/quiz/bank-*.js`: l'archivio incluso (circa 330 domande su tutte le lezioni), scritto dalle slide e, per le prime lezioni, tenendo conto di ciò che la prof sottolinea a lezione. Ogni domanda ha la lezione di provenienza, una spiegazione e, se c'è un legame con le trascrizioni, un segno: «trattata a lezione» (l'argomento è stato spiegato) oppure «indicata dalla prof per l'esame» (la prof ha detto esplicitamente che è d'esame, un errore frequente o un trabocchetto: sono poche, una decina).
 - `js/quiz/gen.js`: 17 tipi di domande **calcolate dal motore** (Nernst, Michaelis-Menten, Fick, osmolarità, τ, λ, Poisson, Starling…): i numeri cambiano a ogni prova e la risposta giusta viene dai modelli del sito, quindi è sempre esatta.
 - Le opzioni vengono rimescolate a ogni prova.
 

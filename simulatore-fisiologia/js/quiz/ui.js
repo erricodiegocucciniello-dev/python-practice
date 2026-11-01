@@ -509,7 +509,7 @@
             el('span', { class: 'pc-n', text: (i + 1) + '.' }),
             el('span', { class: 'pc-r', text: ok === 1 ? '✓ giusta' : ok === 0 ? '✗ sbagliata' : '– senza risposta' }),
             el('a', { class: 'chip', href: '#lezione-' + it.l, text: 'lezione ' + Q.lessonNum(it.l) + (it.t ? ' · ' + it.t : '') }),
-            it.p ? el('span', { class: 'chip prof', title: 'La prof ne ha parlato a lezione', text: 'detto a lezione' }) : null
+            it.p === 2 ? el('span', { class: 'chip prof', title: 'Nelle lezioni la prof ha detto che è un tema d\'esame, un errore frequente o un trabocchetto', text: 'indicata dalla prof per l\'esame' }) : (it.p ? el('span', { class: 'chip prof soft', title: 'L\'argomento è stato trattato a lezione (non è detto che sia domanda d\'esame)', text: 'trattata a lezione' }) : null)
           ]));
           box.appendChild(setText(el('div', { class: 'pc-q' }), it.q, it.user));
           var ul = el('ul', { class: 'pc-o' });

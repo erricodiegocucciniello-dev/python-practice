@@ -416,3 +416,5 @@ main { padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left, 0px))
 }
 
 .btn-flag { margin-top: 8px; font-size: .82rem; padding: 4px 10px; }
+
+.chip.prof.soft { background: var(--surface-2); border-color: var(--border); color: var(--muted); }
