@@ -70,8 +70,8 @@
           { label: 'Rettificante: stimolo dalla cellula 1', run: function () { ecBase(); tR.set(true); }, why: `Nella giunzione rettificante la corrente passa bene da 1 a 2: l'accoppiamento è quello normale.` },
           { label: 'Rettificante: stimolo dalla cellula 2', run: function () { ecBase(); tR.set(true); fSel.set(2); }, why: `Nel verso opposto (da 2 a 1) la giunzione conduce solo il 10%: la cellula 1 quasi non risponde. Le sinapsi elettriche non sono sempre simmetriche.` },
           { label: 'Chimica eccitatoria', run: function () { ecBase(); tSel.set('ch'); }, why: `Si vede il <b>ritardo sinaptico</b> tra il picco presinaptico e l'inizio della risposta, e la risposta è una depolarizzazione lenta.` },
-          { label: 'Chimica inibitoria', run: function () { ecBase(); tSel.set('ch'); sCE.set(-75); }, why: `Lo stesso PdA presinaptico produce un'iperpolarizzazione: il segno dipende dal recettore (potenziale di inversione), non dal PdA.` },
-          { label: 'Chimica: stimolo dalla cellula 2', run: function () { ecBase(); tSel.set('ch'); fSel.set(2); }, why: `La cellula 1 non risponde: la sinapsi chimica è <b>unidirezionale</b>, a differenza di quella elettrica.` }
+          { label: 'Chimica inibitoria', base: function () { ecBase(); tSel.set('ch'); }, run: function () { ecBase(); tSel.set('ch'); sCE.set(-75); }, why: `Lo stesso PdA presinaptico produce un'iperpolarizzazione: il segno dipende dal recettore (potenziale di inversione), non dal PdA.` },
+          { label: 'Chimica: stimolo dalla cellula 2', base: function () { ecBase(); tSel.set('ch'); }, run: function () { ecBase(); tSel.set('ch'); fSel.set(2); }, why: `La cellula 1 non risponde: la sinapsi chimica è <b>unidirezionale</b>, a differenza di quella elettrica.` }
         ]
       });
       /*EXPLAIN-END*/

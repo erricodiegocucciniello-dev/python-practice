@@ -394,3 +394,23 @@ main { padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left, 0px))
 .box.prof h3 { color: var(--accent); }
 .box.prof ul { padding-left: 1.1em; }
 .box.prof li { margin: .35em 0; }
+
+/* ricerca, lezioni studiate, stampa */
+.search { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; font-size: .92rem; }
+.search-res li a { align-items: flex-start; }
+.snip { display: block; color: var(--muted); font-size: .8rem; margin-top: 1px; overflow-wrap: anywhere; }
+.side-list .num { min-width: 1.6em; }
+.card.is-done { border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.card.is-done .kicker { color: var(--ok); }
+.lesson-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 4px 0 12px; }
+@media print {
+  .topbar, .sidebar, .scrim, .sim-block, .lesson-nav, .related, .lesson-tools, .quiz, .section-title:has(+ .quiz) { display: none !important; }
+  .layout { display: block; min-height: 0; }
+  body { background: #fff; color: #000; }
+  main { padding: 0; }
+  .content { max-width: none; }
+  .box, .note, .formula, .oneliner { break-inside: avoid; box-shadow: none; }
+  .box.prof { background: #fff; border: 1px solid #999; border-left: 4px solid #333; }
+  .two-col { display: block; }
+  a { color: inherit; text-decoration: none; }
+}

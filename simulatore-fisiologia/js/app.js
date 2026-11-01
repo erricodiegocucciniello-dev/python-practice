@@ -26,8 +26,55 @@
   tabL.addEventListener('click', function () { sideMode = 'L'; renderSide(); });
   tabA.addEventListener('click', function () { sideMode = 'A'; renderSide(); });
 
-  function lessonLabel(L) { return L.num; }
+  // lezioni segnate come studiate (salvate nel browser)
+  var DONE_KEY = 'fisio-done', done = {};
+  try { (JSON.parse(localStorage.getItem(DONE_KEY) || '[]') || []).forEach(function (id) { done[id] = 1; }); } catch (e) { done = {}; }
+  function saveDone() { try { localStorage.setItem(DONE_KEY, JSON.stringify(Object.keys(done))); } catch (e) { /* senza salvataggio */ } }
+  function lessonLabel(L) { return done[L.id] ? '✓' : L.num; }
+
+  // ---------------------------------------------------------------- ricerca
+  var searchBox = document.getElementById('searchBox'), searchIdx = null, searching = '';
+  function plain(s) { return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\$[^$]*\$/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function fold(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function buildIndex() {
+    searchIdx = [];
+    F.LESSONS.forEach(function (L) {
+      var parts = [L.title, L.card, L.oneliner].concat(L.points || [], (L.formulas || []).map(function (f) { return f.label; }), [L.practical], L.warn || [], L.info || [], L.prof || [], (L.quiz || []).map(function (q) { return q.q; })).map(plain).filter(Boolean);
+      searchIdx.push({ kind: 'L', id: L.id, href: '#lezione-' + L.id, label: L.num + ' · ' + L.title, title: fold(L.title), parts: parts, folded: parts.map(fold) });
+    });
+    Object.keys(F.sims).forEach(function (id) {
+      var sm = F.sims[id], parts = [sm.title, sm.short].map(plain).filter(Boolean);
+      searchIdx.push({ kind: 'S', id: id, href: '#sim-' + id, label: 'Simulatore · ' + sm.title, title: fold(sm.title), parts: parts, folded: parts.map(fold) });
+    });
+  }
+  function runSearch(qs) {
+    if (!searchIdx) buildIndex();
+    var words = fold(qs).split(/\s+/).filter(function (w) { return w.length > 1; });
+    sideList.innerHTML = '';
+    if (!words.length) { renderSide(); return; }
+    var hits = [];
+    searchIdx.forEach(function (e) {
+      var score = 0, snippet = '';
+      var ok = words.every(function (w) {
+        var inTitle = e.title.indexOf(w) >= 0, inText = e.folded.some(function (t) { return t.indexOf(w) >= 0; });
+        if (inTitle) score += 5; if (inText) { score += 1; if (!snippet) { for (var i = 0; i < e.folded.length; i++) { var k = e.folded[i].indexOf(w); if (k >= 0) { var raw = e.parts[i]; snippet = (k > 40 ? '…' : '') + raw.slice(Math.max(0, k - 40), k + 80) + (raw.length > k + 80 ? '…' : ''); break; } } } }
+        return inTitle || inText;
+      });
+      if (ok) hits.push({ e: e, score: score + (e.kind === 'L' ? 0.5 : 0), snippet: snippet });
+    });
+    hits.sort(function (a, b) { return b.score - a.score; });
+    var ul = el('ul', { class: 'side-list search-res' });
+    hits.slice(0, 40).forEach(function (h) {
+      ul.appendChild(el('li', null, [el('a', { href: h.e.href }, [el('span', { class: 'num', text: h.e.kind === 'L' ? '▸' : '◆' }), el('span', null, [el('span', { text: h.e.label }), h.snippet ? el('span', { class: 'snip', text: h.snippet }) : null])])]));
+    });
+    if (!hits.length) ul.appendChild(el('li', { class: 'snip', style: { padding: '8px' }, text: 'Nessun risultato per «' + qs + '».' }));
+    sideList.appendChild(ul);
+  }
+  var searchTimer = 0;
+  searchBox.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { searching = searchBox.value.trim(); runSearch(searching); }, 120); });
+  sideList.addEventListener('click', function (e) { if (searching && e.target.closest && e.target.closest('a')) { searchBox.value = ''; searching = ''; setTimeout(renderSide, 0); } });
   function renderSide() {
+    if (searching) { runSearch(searching); return; }
     tabL.setAttribute('aria-selected', String(sideMode === 'L'));
     tabA.setAttribute('aria-selected', String(sideMode === 'A'));
     sideList.innerHTML = '';
@@ -96,11 +143,12 @@
       el('div', { class: 'kicker', text: 'Verifica' }), el('h3', { text: 'Prova d\'esame: intercorsi a crocette' }),
       el('p', { text: 'Simulazioni a tempo del primo e del secondo intercorso, e prove costruite sui tuoi errori. Con storico dei tentativi.' })
     ]));
-    c.appendChild(el('h2', { class: 'section-title', text: 'Le lezioni' }));
+    var nDone = Object.keys(done).length;
+    c.appendChild(el('h2', { class: 'section-title', text: 'Le lezioni' + (nDone ? ' (' + nDone + ' studiate su ' + F.LESSONS.length + ')' : '') }));
     var g = el('div', { class: 'card-grid' });
     F.LESSONS.forEach(function (L) {
-      g.appendChild(el('a', { class: 'card', href: '#lezione-' + L.id }, [
-        el('div', { class: 'kicker', text: 'Lezione ' + L.num }), el('h3', { text: L.title }), el('p', { text: L.card || '' })
+      g.appendChild(el('a', { class: 'card' + (done[L.id] ? ' is-done' : ''), href: '#lezione-' + L.id }, [
+        el('div', { class: 'kicker', text: 'Lezione ' + L.num + (done[L.id] ? ' · studiata ✓' : '') }), el('h3', { text: L.title }), el('p', { text: L.card || '' })
       ]));
     });
     c.appendChild(g);
@@ -126,6 +174,12 @@
       el('div', { class: 'kicker', text: 'Lezione ' + L.num }),
       el('h1', { text: L.title }),
       L.src ? el('div', { class: 'src', text: 'Slide: ' + L.src }) : null
+    ]));
+    var chk = el('input', { type: 'checkbox' }); chk.checked = !!done[L.id];
+    chk.addEventListener('change', function () { if (chk.checked) done[L.id] = 1; else delete done[L.id]; saveDone(); renderSide(); });
+    c.appendChild(el('div', { class: 'lesson-tools' }, [
+      el('label', { class: 'switch' }, [chk, el('span', { text: 'Segna come studiata' })]),
+      U.button('Stampa la scheda', function () { G.print(); })
     ]));
     c.appendChild(U.texify(el('div', { class: 'oneliner', html: L.oneliner })));
     var left = el('div', { class: 'box' }, [el('h3', { text: 'Concetti chiave' }), U.texify(el('ul', null, L.points.map(function (p) { return el('li', { html: p }); })))]);
