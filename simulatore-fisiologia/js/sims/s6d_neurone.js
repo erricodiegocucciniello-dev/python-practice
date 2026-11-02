@@ -138,12 +138,12 @@
       // ---------------------------------------------------------------- stato corrente (interpolato)
       var Vcur = new Float64Array(115);
       function currentV() {
-        var f = run.frames, p = st.pos, i0 = Math.floor(p), i1 = Math.min(f.length - 1, i0 + 1), u = p - i0;
+        var f = run.frames, p = F.clamp(+st.pos || 0, 0, f.length - 1), i0 = Math.floor(p), i1 = Math.min(f.length - 1, i0 + 1), u = p - i0;
         if (Vcur.length !== run.n) Vcur = new Float64Array(run.n);
         for (var i = 0; i < run.n; i++) Vcur[i] = f[i0][i] + (f[i1][i] - f[i0][i]) * u;
         return Vcur;
       }
-      function tNow() { var p = st.pos, i0 = Math.floor(p), i1 = Math.min(run.t.length - 1, i0 + 1); return run.t[i0] + (run.t[i1] - run.t[i0]) * (p - i0); }
+      function tNow() { var p = F.clamp(+st.pos || 0, 0, run.t.length - 1), i0 = Math.floor(p), i1 = Math.min(run.t.length - 1, i0 + 1); return run.t[i0] + (run.t[i1] - run.t[i0]) * (p - i0); }
 
       // ---------------------------------------------------------------- disegno del neurone
       var hit = [], flow = [0, 0, 0, 0, 0], dots = 0, view = { cur: -1 };
@@ -415,7 +415,7 @@
       var pT = U.plot(L.main, { title: 'Potenziale di membrana nei cinque punti di registrazione', xlabel: 'tempo (ms)', ylabel: 'Vm (mV)', height: 230, ylim: [-90, 45] });
       var pE = U.plot(L.main, { title: 'Ampiezza massima raggiunta lungo il neurone: il potenziale locale si attenua, il PdA no', xlabel: 'distanza dal soma (µm):  ← dendrite  |  assone →', ylabel: 'Vm massimo (mV)', height: 230, ylim: [-90, 45], legend: false });
       function drawPlots() {
-        var k = Math.floor(st.pos), c = cable, fr = run.frames, i;
+        var k = Math.floor(F.clamp(+st.pos || 0, 0, run.frames.length - 1)), c = cable, fr = run.frames, i;
         var t = run.t.slice(0, k + 1);
         var series = ELEC.map(function (e) {
           var idx = e.at(c), y = new Array(k + 1);
@@ -453,8 +453,8 @@
           // rallentatore automatico mentre il PdA percorre l'assone: altrimenti i nodi si accenderebbero in 0,3 ms (impercettibili)
           var V0 = currentV(), act = false, c0 = cable;
           act = V0[c0.aisIndex + 3] > -25 && V0[c0.nodeIdx[4]] < -10; // dall'innesco all'arrivo al quinto nodo
-          var adv = dt * (act ? MSPS / 20 : MSPS) * st.speed / (EVERY * DT);
-          st.pos = Math.min(run.frames.length - 1, st.pos + adv);
+          var adv = Math.max(0, dt) * (act ? MSPS / 20 : MSPS) * st.speed / (EVERY * DT);
+          st.pos = Math.max(0, Math.min(run.frames.length - 1, st.pos + adv));
           if (st.pos >= run.frames.length - 1) st.playing = false;
           dirty = true;
         }
