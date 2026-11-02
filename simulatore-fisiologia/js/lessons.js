@@ -156,6 +156,8 @@
       formulas: [],
       practical: "Il mescolamento non richiede ATP: avviene anche con inibitori metabolici. Dipende invece dalla temperatura, perché dipende dalla fluidità dei lipidi.",
       sims: [
+        { id: 'strutture', title: "Una proteina di membrana vera: recettore a 7 eliche", preset: { prot: 'rodopsina' },
+          observe: "Il retinale è legato alla Lys296: le sette eliche attraversano il doppio strato come nello schema delle proteine integrali." },
         { id: 'fryeedidin', preset: { T: 37 },
           predict: { q: "Ripetendo l'esperimento a 15 °C, dopo 40 minuti le proteine saranno…", options: ["mescolate come a 37 °C", "ancora quasi separate", "tutte nella metà umana"], answer: 1, why: "A bassa temperatura i lipidi sono meno fluidi e la diffusione laterale delle proteine rallenta moltissimo." },
           observe: "lancia una fusione a 37 °C, poi una a 15 °C; prova anche gli inibitori metabolici: il mescolamento non cambia, perché è diffusione passiva." },
@@ -290,6 +292,9 @@
         { label: 'Impedimento sterico (Renkin)', tex: 'H(\\lambda) = (1-\\lambda)^2\\left(1 - 2{,}104\\lambda + 2{,}09\\lambda^3 - 0{,}95\\lambda^5\\right)' }
       ],
       sims: [
+        { id: 'strutture', title: "L'acquaporina e il canale K⁺ nelle strutture reali", preset: { prot: 'aqp1' },
+          predict: { q: "Che cosa rende l'acquaporina permeabile all'acqua ma non ai protoni?", options: ["il poro stretto con la fila di molecole d'acqua e la carica positiva della strozzatura ar/R, più i motivi NPA al centro", "un poro largo che lascia passare qualsiasi soluto piccolo", "una pompa che usa ATP per spostare l'acqua"], answer: 0, why: "Il poro è largo circa 3 Å: l'acqua passa in fila indiana; l'arginina della strozzatura respinge i cationi e gli NPA orientano l'acqua in modo da impedire il passaggio dei protoni." },
+          observe: "con «Sezione» vedi la fila di molecole d'acqua nel poro dell'AQP1; passa a KcsA per il filtro del K⁺." },
         { id: 'permeabilita', title: 'Diffusione ristretta nei pori', preset: { mode: 'pori' },
           predict: { q: "In un poro di raggio 4 Å (diametro 8 Å), il glucosio (raggio ~3,6 Å) passa…", options: ["quasi liberamente", "pochissimo (< 1%)", "per niente"], answer: 1, why: "λ = 3,6/4 = 0,9: le interazioni con le pareti riducono la permeabilità a meno dell'1%." },
           observe: "allarga il poro e osserva quando ciascuna molecola comincia a passare." },
@@ -325,6 +330,8 @@
         { label: 'Corrente attraverso Kir', tex: 'I = g\\,\\frac{V - E_K}{1 + e^{(V-E_K-10)/10}}' }
       ],
       sims: [
+        { id: 'strutture', title: "Il filtro di selettività in una struttura reale", preset: { prot: 'kcsa' },
+          observe: "gli ioni K⁺ deidratati stanno in fila nel filtro TVGYG; confronta con NavAb, dove ogni subunità ha anche il sensore di voltaggio." },
         { id: 'canale3d', preset: { type: 'nav' },
           predict: { q: "Se la membrana viene portata a −10 mV e mantenuta lì, il canale Na⁺…", options: ["si apre e resta aperto", "si apre e poi si chiude per inattivazione", "non si apre"], answer: 1, why: "Le porte m si aprono in fretta, la porta h si chiude più lentamente: il canale passa da chiuso → aperto → inattivato." },
           observe: "usa il gradino a −10 mV e poi torna a −65 mV. Attiva la lidocaina e lancia il treno di 10 PdA: il blocco aumenta a ogni impulso (uso-dipendenza)." },
@@ -360,6 +367,8 @@
         { label: 'Con inibitore competitivo', tex: 'F = \\frac{F_{max}\\,C}{K_m(1 + [I]/K_i) + C}' }
       ],
       sims: [
+        { id: 'strutture', title: "GLUT1: un trasportatore, non un canale", preset: { prot: 'glut1' },
+          observe: "il sito di legame del glucosio è accessibile da un solo lato alla volta (accesso alternato)." },
         { id: 'carrier', preset: { type: 'glut1' },
           predict: { q: "Con il glucosio a una concentrazione pari a K_m, il flusso è…", options: ["massimo", "metà del massimo", "proporzionale alla concentrazione come nella diffusione"], answer: 1, why: "Per definizione K<sub>m</sub> è la concentrazione che dà F = F<sub>max</sub>/2." },
           observe: "aggiungi un inibitore competitivo: F<sub>max</sub> non cambia, K<sub>m</sub> apparente aumenta. Confronta GLUT1 e GLUT2 (K<sub>m</sub> 17 mM, adatto al fegato e alla cellula β)." }
@@ -389,6 +398,8 @@
         { label: 'Accumulo massimo con SGLT1', tex: '\\frac{[Glc]_i}{[Glc]_o} = \\left(\\frac{[Na]_o}{[Na]_i}\\right)^2 e^{-2FV_m/RT}' }
       ],
       sims: [
+        { id: 'strutture', title: "La pompa Na⁺/K⁺ in due stati reali", preset: { prot: 'nka' },
+          observe: "porta il cursore da E1 (3 Na⁺) a E2 (2 K⁺): i domini citoplasmatici si riorganizzano e il sito di legame cambia lato." },
         { id: 'pompa', preset: {},
           predict: { q: "Quanta energia serve per un ciclo della pompa Na⁺/K⁺ (3 Na⁺ fuori, 2 K⁺ dentro, Vm = −70 mV)?", options: ["circa 5 kJ/mol", "circa 44 kJ/mol", "circa 150 kJ/mol"], answer: 1, why: "Spostare 3 Na⁺ costa ~3 × 13 kJ, i 2 K⁺ ~2 × 2 kJ: circa 44 kJ, meno dei ~52 kJ forniti da un ATP nella cellula." },
           observe: "segui i 7 passi del ciclo; attiva l'ouabaina. Nel bilancio energetico confronta la H⁺/K⁺ gastrica con 1 o con 2 H⁺ per ATP a pH 1: perché a pH molto acido la pompa può spostare un solo H⁺?" },
@@ -721,6 +732,8 @@
         { label: 'Coefficiente di accoppiamento elettrico', tex: 'k = \\frac{\\Delta V_2}{\\Delta V_1} = \\frac{g_c}{g_c + g_{L,2}}' }
       ],
       sims: [
+        { id: 'strutture', title: "La giunzione comunicante in una struttura reale", preset: { prot: 'cx26' },
+          observe: "due emicanali di sei connessine agganciati nella fessura: il poro collega direttamente i due citoplasmi." },
         { id: 'elettricachimica', preset: { type: 'el' },
           predict: { q: "In una sinapsi elettrica non rettificante, stimolando la cellula 2…", options: ["la cellula 1 non risponde", "anche la cellula 1 si depolarizza (bidirezionale)", "la cellula 1 si iperpolarizza"], answer: 1, why: "Le giunzioni comunicanti conducono in entrambi i sensi." },
           observe: "aumenta la conduttanza della giunzione: il coefficiente di accoppiamento cresce verso 1. Attiva la rettificazione e stimola la cellula 2." },
@@ -881,6 +894,8 @@
         { label: 'Fattore di sicurezza', tex: 'FS = \\frac{\\text{ampiezza del potenziale di placca}}{V_{soglia} - V_{riposo}}' }
       ],
       sims: [
+        { id: 'strutture', title: "Il recettore nicotinico dell'acetilcolina", preset: { prot: 'nachr' },
+          observe: "cinque subunità attorno al poro, con i siti per l'ACh nel dominio extracellulare: il bersaglio del curaro e degli anticorpi della miastenia." },
         { id: 'placca', preset: { mode: 'quanti', Ca: 0.8, Mg: 6.8 },
           predict: { q: "In basso Ca²⁺ / alto Mg²⁺ l'istogramma delle ampiezze evocate mostra…", options: ["una sola campana", "picchi a multipli interi di ~0,4 mV e molti fallimenti", "valori casuali senza struttura"], answer: 1, why: "Il rilascio è quantale: 0, 1, 2, 3… vescicole, con probabilità di Poisson." },
           observe: "confronta m calcolato con il metodo dei fallimenti e con il rapporto tra le medie. Passa al Ringer normale: m ≈ 200." },

@@ -15,7 +15,7 @@ Per averlo online (anche dal telefono) puoi pubblicare la cartella con GitHub Pa
   - i simulatori **già impostati** sul concetto della lezione, ciascuno preceduto da una domanda "Prevedi prima di provare";
   - le note **Attenzione** dove una slide contiene un errore, con il valore corretto;
   - un quiz di verifica con spiegazioni e i collegamenti alle lezioni correlate.
-- **Per argomento**: i 43 simulatori raggruppati in 9 sezioni. Ogni simulatore indica in quali lezioni compare.
+- **Per argomento**: i 44 simulatori raggruppati in 9 sezioni. Ogni simulatore indica in quali lezioni compare.
 
 | Sezione | Lezioni | Simulatori |
 |---|---|---|
@@ -74,6 +74,10 @@ I testi sono scritti a mano a partire dalle slide e dai valori calcolati dal mod
 
 ## Modelli e validazione
 
+## Strutture reali dal Protein Data Bank
+
+Il simulatore **Strutture reali dal Protein Data Bank** mostra le coordinate sperimentali di otto proteine: acquaporina 1 (PDB 1J4N), canale del K⁺ KcsA (1BL8), canale del Na⁺ NavAb (3RVY), recettore nicotinico dell'acetilcolina (2BG9), connessina 26 (2ZW3), GLUT1 (4PYP), Na⁺/K⁺-ATPasi nei due stati E1 (3WGU) ed E2 (2ZXE) e rodopsina (1U19). Per tenere leggera la pagina i file sono ridotti allo scheletro (atomi Cα) più ioni, acque del poro e ligandi importanti (circa 130 kB in tutto) e si caricano solo quando si apre il simulatore. La conversione si rifà con `python3 tools/pdb2js.py` (scarica i file da RCSB; serve numpy). I dati del PDB sono pubblici; ogni struttura riporta la citazione dell'articolo originale. Le posizioni intermedie del cursore E1 ↔ E2 della pompa sono un'interpolazione lineare tra due strutture sperimentali, non un filmato.
+
 I simulatori calcolano in tempo reale le equazioni della fisiologia: Nernst, Goldman-Hodgkin-Katz, Gibbs-Donnan, Hodgkin-Huxley (1952), Connor-Stevens (1977), cavo a compartimenti (amielinico e mielinico), catena di Markov per il canale singolo, rilascio quantale di Poisson/binomiale, Fick, Renkin, van't Hoff, Kedem-Katchalsky, Michaelis-Menten, Starling con Landis-Pappenheimer, ecc. Ogni simulatore ha una sezione "Modello e parametri usati" che dichiara le ipotesi e indica dove un modello è semplificato a scopo didattico.
 
 Il motore è verificato da test automatici che confrontano i risultati con valori di letteratura e delle slide, per esempio:
@@ -102,7 +106,9 @@ index.html                 pagina unica (apribile con doppio clic)
 css/style.css              stile, tema chiaro/scuro
 js/core/                   motore numerico (funziona anche in Node per i test)
 js/ui/                     componenti, grafici, scene 3D, riquadro di spiegazione (explain.js)
-js/sims/                   i 43 simulatori
+js/sims/                   i 44 simulatori
+js/pdb/                    strutture reali ridotte dal Protein Data Bank (caricate solo quando servono)
+tools/pdb2js.py            converte i file del PDB in js/pdb/*.js (non serve per usare il sito)
 js/lessons.js              contenuti delle 31 lezioni
 js/lessons-prof.js         riquadri «Detto a lezione» (ciò che la prof sottolinea, lezioni 1–13)
 js/quiz/                   prove d'esame: motore, pagina, archivio di domande, domande calcolate
