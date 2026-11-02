@@ -200,6 +200,7 @@ def build(cfg, keep=None, align=None):
                 if np.linalg.norm(pts[i] - pts[j]) < 1.9: bonds.append([i, j])
         ligs.append({'n': lg, 'atoms': [[a['el'] or a['name'][0], *[int(round(c * 10)) for c in pts[i]]] for i, a in enumerate(at)], 'bonds': bonds})
 
+    pore = cfg['pore'](X, index, waters, len(ops)) if cfg.get('pore') else None
     marks = []
     for m in cfg.get('marks', []):
         ids = []
@@ -217,6 +218,7 @@ def build(cfg, keep=None, align=None):
            'n': int(len(X)), 'xyz': [int(round(c * 10)) for row in X for c in row], 'ss': ''.join(str(int(s)) for s in sst), 'seq': seqs,
            'seg': segs, 'nch': len(units), 'mem': [[round(m, 1) for m in pair] for pair in mems], 'marks': marks,
            'ions': [[e, *[int(round(c * 10)) for c in p]] for e, p in ions], 'water': [[int(round(c * 10)) for c in p] for p in waters], 'lig': ligs}
+    if pore: out['pore'] = pore
     print('%-8s %s: %d residui, %d catene, %d ioni, %d acque, ligandi %s, asse %s, flip %s' % (cfg['name'], cfg['pdb'], len(X), len(units), len(ions), len(waters), [l['n'] for l in ligs], np.round(axis, 2), flip))
     return out, dict(P=P, xyz=xyz, X=X, index=index, units=units, res=res, T=T, ops=ops, locate=locate, resid=resid, owner=owner)
 
@@ -259,8 +261,37 @@ def water_aqp1(P, xyz, index, units):
     return out
 
 
+def pore_aqp1(X, index, waters, nops):
+    """Percorso del poro di ogni subunità: poligonale che passa per le acque cristallografiche del canale (estesa di 4 Å alle due estremità).
+    Restituisce, per subunità, i punti (decimi di Å), la lunghezza d'arco della strozzatura ar/R e dei motivi NPA, con ar/R dal lato extracellulare."""
+    nper = len(waters) // nops; out = []
+    for oi in range(nops):
+        W = np.array(waters[oi * nper:(oi + 1) * nper])
+        c = W.mean(0); u, s_, vt = np.linalg.svd(W - c); d = vt[0]
+        lat = np.linalg.norm((W - c) - np.outer((W - c) @ d, d), axis=1)
+        Wk = W[lat < 4.5] if (lat < 4.5).sum() >= 4 else W  # si scartano le acque fuori dall'asse del canale
+        c = Wk.mean(0); u, s_, vt = np.linalg.svd(Wk - c); d = vt[0]
+        t = (Wk - c) @ d; tt = np.linspace(t.min() - 4, t.max() + 4, 12)
+        # centro del poro: curva quadratica nel parametro t (liscia, segue la leggera curvatura del canale)
+        P = np.array([np.polyval(np.polyfit(t, Wk[:, k], 2), tt) for k in range(3)]).T
+        arc = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))])
+        def arc_of(q):  # parametro d'arco del punto della poligonale più vicino a q
+            best = (1e9, 0)
+            for i in range(len(P) - 1):
+                t = np.clip(np.dot(q - P[i], P[i + 1] - P[i]) / np.dot(P[i + 1] - P[i], P[i + 1] - P[i]), 0, 1)
+                dist = np.linalg.norm(P[i] + t * (P[i + 1] - P[i]) - q)
+                if dist < best[0]: best = (dist, arc[i] + t * np.linalg.norm(P[i + 1] - P[i]))
+            return best[1]
+        npa = arc_of(np.mean([X[index[('A', oi, 78)]], X[index[('A', oi, 194)]]], axis=0))
+        arr = arc_of(np.mean([X[index[('A', oi, n)]] for n in (58, 182, 191, 197)], axis=0))
+        if arr < npa:  # si orienta il percorso dal citoplasma all'extracellulare
+            P = P[::-1]; arc = arc[-1] - arc[::-1]; npa = arc[-1] - npa; arr = arc[-1] - arr
+        out.append({'pts': [[int(round(c * 10)) for c in p] for p in P], 'len': round(float(arc[-1]), 2), 'npa': round(float(npa), 2), 'arr': round(float(arr), 2)})
+    return out
+
+
 CONFIGS = [
-    dict(name='aqp1', pdb='1J4N', chains=['A'], assembly=True, orient='sym', water=water_aqp1, half=15,
+    dict(name='aqp1', pdb='1J4N', chains=['A'], assembly=True, orient='sym', water=water_aqp1, pore=pore_aqp1, half=15,
          up=lambda g: g.z([g.num('A', n) for n in (58, 182, 191, 197)]) > g.z([g.num('A', 78), g.num('A', 194)]),
          marks=[dict(res=[('A', 78), ('A', 194)], t='NPA', c='#2e9e5b'), dict(res=[('A', 58), ('A', 182), ('A', 191), ('A', 197)], t='ar/R', c='#d9480f')]),
     dict(name='kcsa', pdb='1BL8', chains=['A', 'B', 'C', 'D'], assembly=False, orient='sym', ions=['K'], half=15,

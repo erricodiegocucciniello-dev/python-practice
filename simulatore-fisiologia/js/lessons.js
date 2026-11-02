@@ -294,7 +294,7 @@
       sims: [
         { id: 'strutture', title: "L'acquaporina e il canale K⁺ nelle strutture reali", preset: { prot: 'aqp1' },
           predict: { q: "Che cosa rende l'acquaporina permeabile all'acqua ma non ai protoni?", options: ["il poro stretto con la fila di molecole d'acqua e la carica positiva della strozzatura ar/R, più i motivi NPA al centro", "un poro largo che lascia passare qualsiasi soluto piccolo", "una pompa che usa ATP per spostare l'acqua"], answer: 0, why: "Il poro è largo circa 3 Å: l'acqua passa in fila indiana; l'arginina della strozzatura respinge i cationi e gli NPA orientano l'acqua in modo da impedire il passaggio dei protoni." },
-          observe: "con «Sezione» vedi la fila di molecole d'acqua nel poro dell'AQP1; passa a KcsA per il filtro del K⁺." },
+          observe: "guarda le molecole d'acqua muoversi in fila singola nel poro dell'AQP1 (modello): a riposo passano nei due versi in egual numero, con una forza osmotica prevale un verso. Poi passa a KcsA per il filtro del K⁺." },
         { id: 'permeabilita', title: 'Diffusione ristretta nei pori', preset: { mode: 'pori' },
           predict: { q: "In un poro di raggio 4 Å (diametro 8 Å), il glucosio (raggio ~3,6 Å) passa…", options: ["quasi liberamente", "pochissimo (< 1%)", "per niente"], answer: 1, why: "λ = 3,6/4 = 0,9: le interazioni con le pareti riducono la permeabilità a meno dell'1%." },
           observe: "allarga il poro e osserva quando ciascuna molecola comincia a passare." },

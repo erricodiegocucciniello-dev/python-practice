@@ -34,7 +34,7 @@
         'La strozzatura <b>ar/R</b> (arancio: residui aromatici e un\'arginina) fa da filtro: lascia passare l\'acqua e non i soluti più grandi; la carica positiva dell\'arginina respinge i protoni e i cationi.',
         'Il mercurio (Hg²⁺) blocca AQP1 legandosi a una cisteina vicino alla strozzatura: è il blocco che si prova nel simulatore dell\'eritrocita.'
       ],
-      look: 'Attiva «Sezione» per vedere dentro un poro e «Acque, ioni e ligandi» per vedere la fila di molecole d\'acqua.'
+      look: 'Si apre sul poro, tagliato lungo l\'asse: le molecole d\'acqua si muovono in fila singola (modello, non dinamica molecolare). Cambia la forza motrice per simulare l\'osmosi; «Vista d\'insieme» mostra il tetramero.'
     },
     kcsa: {
       lead: 'Quattro subunità (colori diversi) disposte come un cono attorno al poro; il lato extracellulare è in alto.',
@@ -108,7 +108,7 @@
   F.registerSim('strutture', {
     title: 'Strutture reali dal Protein Data Bank',
     section: 'canali',
-    short: 'Acquaporina, canali del K⁺ e del Na⁺, recettore nicotinico, connessina, GLUT1, pompa Na⁺/K⁺ e rodopsina: le coordinate sperimentali, con il filtro di selettività, gli ioni e le molecole d\'acqua.',
+    short: 'Acquaporina, canali del K⁺ e del Na⁺, recettore nicotinico, connessina, GLUT1, pompa Na⁺/K⁺ e rodopsina: le coordinate sperimentali, con il filtro di selettività, gli ioni e le molecole d\'acqua; per l\'acquaporina anche un modello dell\'acqua che attraversa il poro in fila singola.',
     mount: function (host, P) {
       var L = U.simLayout(host), THREE = G.THREE;
       var st = { prot: P.prot || 'aqp1', rep: 'tube', col: 'chain', mem: true, marks: true, extras: true, section: false, spin: false, t: 0, play: false, data: null, token: 0 };
@@ -123,15 +123,32 @@
       var sT = U.slider({ label: 'Stato: E1 (3 Na⁺) ↔ E2 (2 K⁺)', min: 0, max: 1, step: 0.01, value: 0, fmt: function (v) { return v < 0.02 ? 'E1' : (v > 0.98 ? 'E2' : Math.round(v * 100) + '% verso E2'); }, onInput: function (v) { st.t = v; st.play = false; bPlay.textContent = 'Anima il ciclo'; morph(); } });
       var bPlay = U.button('Anima il ciclo', function () { st.play = !st.play; bPlay.textContent = st.play ? 'Ferma' : 'Anima il ciclo'; });
       var pumpBox = el('div', { class: 'ctl' }, [sT.el, bPlay]);
+      // acqua in movimento nel poro dell'acquaporina (modello a fila singola, non dinamica molecolare)
+      var dyn = { on: true, force: 0, speed: 250, sims: null, pores: null, meshes: [], hist: { t: [], f: [], b: [] }, lastPlot: 0, tNs: 0 };
+      var tDyn = U.toggle({ label: 'Acqua in movimento nel poro (modello)', value: true, onChange: function (v) { dyn.on = v; vis(); } });
+      var sForce = U.slider({ label: 'Forza motrice osmotica sull\'acqua', min: -0.1, max: 0.1, step: 0.005, value: 0, fmt: function (v) { return Math.abs(v) < 0.0025 ? 'nessuna (equilibrio)' : (v > 0 ? 'esterno ipertonico: ' : 'esterno ipotonico: ') + F.fmt(Math.abs(v), 3) + ' kT/Å'; }, onInput: function (v) { dyn.force = v; } });
+      var sSpeed = U.slider({ label: 'Velocità (tempo simulato al secondo)', min: 50, max: 1500, step: 10, value: 250, fmt: function (v) { return F.fmt(v / 1000, 2) + ' ns/s'; }, onInput: function (v) { dyn.speed = v; } });
+      var bZoom = U.button('Vai al poro', function () { zoomPore(); });
+      var bOver = U.button('Vista d\'insieme', function () { st.planeMode = 'default'; if (st.data) { rebuild(true); clip(); } });
+      var bReset = U.button('Azzera i conteggi', function () { resetDyn(); });
+      var dynBox = el('div', { class: 'ctl-group' }, [el('div', { class: 'gtitle', text: 'Acqua nel poro (modello)' }), tDyn.el, sForce.el, sSpeed.el, el('div', { class: 'btn-row' }, [bZoom, bOver, bReset])]);
       L.controls.appendChild(pSel.el); L.controls.appendChild(U.group('Aspetto', [rSel.el, cSel.el]));
-      L.controls.appendChild(U.group('Mostra', [tMem.el, tMk.el, tEx.el, tSec.el, tSpin.el])); L.controls.appendChild(pumpBox);
+      L.controls.appendChild(U.group('Mostra', [tMem.el, tMk.el, tEx.el, tSec.el, tSpin.el])); L.controls.appendChild(pumpBox); L.controls.appendChild(dynBox);
       L.controls.appendChild(U.params('Coordinate sperimentali del <b>Protein Data Bank</b> (RCSB, dati pubblici), ridotte allo scheletro (atomi Cα) con <code>tools/pdb2js.py</code> per tenere leggera la pagina; ioni, acque del poro e ligandi importanti sono conservati. Le strutture sono state orientate con la membrana in orizzontale e il lato extracellulare in alto; lo spessore della fascia (≈ 30 Å) è una stima. Nastri: spessore diverso per eliche, foglietti e anse (struttura secondaria dalle annotazioni del file). Sono modelli di cristalli: le proteine reali si muovono continuamente.'));
 
       var info = el('div', { class: 'box', style: { marginTop: '10px' } });
       var scn = F.scene3d(L.main, { height: function (w) { return Math.round(Math.max(320, Math.min(520, w * 0.72))); }, camPos: [0, 40, 160], fov: 40, minDistance: 20, maxDistance: 600, hint: 'Trascina per ruotare · rotellina per lo zoom' });
-      var status = el('div', { class: 'statusline' }); L.main.appendChild(status); L.main.appendChild(info);
+      var status = el('div', { class: 'statusline' }); L.main.appendChild(status);
+      var dynMain = el('div'); L.main.appendChild(dynMain); L.main.appendChild(info);
+      var dro = U.readouts([{ key: 't', label: 'Tempo simulato' }, { key: 'f', label: 'Attraversamenti verso l\'esterno (4 canali)', hl: true }, { key: 'b', label: 'Attraversamenti verso l\'interno' }, { key: 'n', label: 'Flusso netto per canale' }]);
+      dynMain.appendChild(dro.el);
+      var pU = U.plot(dynMain, { title: 'Profilo di energia lungo il poro e molecole d\'acqua (un canale)', xlabel: 'posizione lungo il poro (Å): citoplasma → extracellulare', ylabel: 'energia (kT)', height: 190, ylim: [-0.5, 4.5] });
+      var pC = U.plot(dynMain, { title: 'Attraversamenti cumulati (somma dei 4 canali)', xlabel: 'tempo simulato (ns)', ylabel: 'numero di molecole', height: 170 });
+      var dynNote = el('div', { class: 'note info', html: '<b>Che cos\'è questa animazione.</b> Non è una dinamica molecolare atomistica: ogni molecola d\'acqua è un punto che diffonde lungo l\'asse del poro (percorso ricavato dalle molecole d\'acqua della struttura cristallina 1J4N), tra due barriere di energia (la strozzatura <b>ar/R</b> e i motivi <b>NPA</b>) e senza potersi superare: la <b>fila singola</b>. Altezza delle barriere e diffusione sono scelte per riprodurre l\'ordine di grandezza degli attraversamenti (circa 1 per ns e per direzione, per canale), non sono calcolate. La forza motrice fisiologica (300 mOsm) è circa 0,0002 kT/Å: i valori del cursore sono molto più grandi, come nelle simulazioni di dinamica molecolare, per vedere un flusso netto in pochi ns. Il modello non descrive l\'orientazione delle molecole, che nell\'AQP1 si inverte al centro del canale ed è alla base dell\'esclusione dei protoni. Una vera dinamica molecolare dell\'acquaporina (per esempio de Groot e Grubmüller, Science 2001) richiede decine di migliaia di atomi e giorni di calcolo.' });
+      dynMain.appendChild(dynNote);
       var root = null, plane = null, objs = [], tubes = [], tubeSetup = null, markObjs = [], extraObjs = [], memObjs = [], loading = false;
-      if (scn && THREE) { scn.renderer.localClippingEnabled = true; plane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); }
+      var planePore = null;
+      if (scn && THREE) { scn.renderer.localClippingEnabled = true; plane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); planePore = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); }
 
       // ------------------------------------------------------------- caricamento
       function load(name) {
@@ -139,9 +156,10 @@
         F.loadPdb(name, function (d) {
           if (tk !== st.token) return;
           if (!d) { status.textContent = 'Struttura non disponibile.'; return; }
-          st.data = d; st.t = 0; st.play = false; sT.set(0, true); bPlay.textContent = 'Anima il ciclo';
-          pumpBox.style.display = name === 'nka' ? '' : 'none';
+          st.data = d; st.t = 0; st.play = false; sT.set(0, true); bPlay.textContent = 'Anima il ciclo'; st.planeMode = 'default'; dyn.sims = null;
+          pumpBox.style.display = name === 'nka' ? '' : 'none'; dynBox.style.display = dynMain.style.display = d.pore ? '' : 'none';
           rebuild(true); describe();
+          if (d.pore) setTimeout(function () { if (tk === st.token) zoomPore(); }, 150);
         });
       }
       function describe() {
@@ -225,7 +243,7 @@
         });
         // residui chiave
         d.marks.forEach(function (m, mi) {
-          m.i.forEach(function (ri, k) { var sp = sphere(pos(d, ri, st.t), 2.0, m.c); sp.userData.ri = ri; root.add(sp); markObjs.push(sp); if (k === 0) { var lb = scn.label(sp, m.t); lb.el.classList.add('pdb-label'); markObjs[markObjs.length - 1].userData.lab = lb; } });
+          m.i.forEach(function (ri, k) { var sp = sphere(pos(d, ri, st.t), 1.45, m.c); sp.userData.ri = ri; root.add(sp); markObjs.push(sp); if (k === 0) { var lb = scn.label(sp, m.t); lb.el.classList.add('pdb-label'); markObjs[markObjs.length - 1].userData.lab = lb; } });
         });
         // ioni, acque, ligandi
         function addExtras(ions, lig, key) {
@@ -242,7 +260,7 @@
         addExtras(d.ions, d.lig, 0);
         if (d.ions2) addExtras(d.ions2, d.lig2 || [], 1);
         d.water.forEach(function (w) { var sp = sphere([w[0] / 10, w[1] / 10, w[2] / 10], 0.85, ELCOL.HOH); sp.userData.state = -1; root.add(sp); extraObjs.push(sp); });
-        vis(); clip();
+        setupDyn(); vis(); clip();
         if (reset) {
           var cx = 0, cy = 0, cz = 0; for (i = 0; i < d.n; i++) { cx += d.xyz[3 * i]; cy += d.xyz[3 * i + 1]; cz += d.xyz[3 * i + 2]; } cx /= 10 * d.n; cy /= 10 * d.n; cz /= 10 * d.n;
           var Rb = 0; for (i = 0; i < d.n; i++) Rb = Math.max(Rb, Math.hypot(d.xyz[3 * i] / 10 - cx, d.xyz[3 * i + 1] / 10 - cy, d.xyz[3 * i + 2] / 10 - cz));
@@ -254,12 +272,14 @@
         memObjs.forEach(function (m) { m.visible = st.mem; });
         markObjs.forEach(function (m) { m.visible = st.marks; if (m.userData.lab) m.userData.lab.visible = st.marks; });
         var near = st.t > 0.5 ? 1 : 0;
-        extraObjs.forEach(function (o) { var s = o.userData.state; o.visible = st.extras && (s === -1 || s === near); });
+        var hasDyn = !!(st.data && st.data.pore);
+        extraObjs.forEach(function (o) { var s = o.userData.state; o.visible = st.extras && (s === -1 ? !(dyn.on && hasDyn) : s === near); });
+        if (!(dyn.on && hasDyn)) dyn.meshes.forEach(function (arr) { arr.forEach(function (m) { m.visible = false; }); });
       }
       function clip() {
         if (!root) return;
         root.traverse(function (o) {
-          if (o.material && !o.userData.keep) { o.material.clippingPlanes = st.section ? [plane] : []; o.material.clipShadows = false; o.material.needsUpdate = true; }
+          if (o.material && !o.userData.keep) { o.material.clippingPlanes = st.section ? [st.planeMode === 'pore' ? planePore : plane] : []; o.material.clipShadows = false; o.material.needsUpdate = true; }
         });
         if (st.section && st.spin) { st.spin = false; tSpin.set(false); if (scn) scn.controls.autoRotate = false; }
       }
@@ -275,8 +295,67 @@
         vis();
       }
 
+      // ------------------------------------------------------------- acqua nel poro (modello a fila singola)
+      function setupDyn() {
+        dyn.meshes = []; var d = st.data;
+        if (!d || !d.pore || !root) return;
+        if (!dyn.sims) {
+          dyn.sims = d.pore.map(function (p, k) { return new F.SingleFile({ len: p.len, sA: p.arr, sN: p.npa, D: 0.4, Ba: 2, Bn: 3, seed: 11 + 7 * k }); });
+          dyn.hist = { t: [], f: [], b: [] }; dyn.tNs = 0; dyn.lastHist = 0;
+        }
+        dyn.pores = d.pore.map(function (p) {
+          var pts = p.pts.map(function (q) { return new THREE.Vector3(q[0] / 10, q[1] / 10, q[2] / 10); }), acc = [0];
+          for (var i = 1; i < pts.length; i++) acc.push(acc[i - 1] + pts[i].distanceTo(pts[i - 1]));
+          return { pts: pts, acc: acc, len: p.len };
+        });
+        var geo = new THREE.SphereGeometry(1.5, 16, 12), m = mat('#ff3b30', { emissive: new THREE.Color('#5a0e08'), roughness: 0.3 });
+        dyn.pores.forEach(function () { var arr = []; for (var j = 0; j < 14; j++) { var sp = new THREE.Mesh(geo, m); sp.visible = false; root.add(sp); arr.push(sp); } dyn.meshes.push(arr); });
+      }
+      function posOnPore(pr, s0) {
+        var a = pr.acc, last = a[a.length - 1], s = F.clamp(s0 / pr.len * last, 0, last), i = 0;
+        while (i < a.length - 2 && s > a[i + 1]) i++;
+        return pr.pts[i].clone().lerp(pr.pts[i + 1], (s - a[i]) / Math.max(1e-6, a[i + 1] - a[i]));
+      }
+      function resetDyn() { dyn.sims = null; setupDyn(); vis(); statsDyn(true); }
+      function statsDyn(force) {
+        if (!dyn.sims) return;
+        var f = 0, b = 0; dyn.sims.forEach(function (sm) { f += sm.fwd; b += sm.bwd; });
+        dro.set('t', F.fmt(dyn.tNs, 1) + ' ns'); dro.set('f', String(f)); dro.set('b', String(b));
+        dro.set('n', dyn.tNs > 0.05 ? (f - b) / dyn.sims.length / dyn.tNs >= 0 ? '+' + F.fmt((f - b) / dyn.sims.length / dyn.tNs, 2) + ' molecole/ns' : F.fmt((f - b) / dyn.sims.length / dyn.tNs, 2) + ' molecole/ns' : '—');
+        var now = Date.now(); if (!force && now - dyn.lastPlot < 120) return; dyn.lastPlot = now;
+        var sm0 = dyn.sims[0], S = [], Uv = [], i; for (i = 0; i <= 60; i++) { S.push(sm0.len * i / 60); Uv.push(sm0.U(sm0.len * i / 60)); }
+        pU.update({ series: [{ x: S, y: Uv, color: '--c1' }, { x: sm0.z.slice(), y: sm0.z.map(function (z) { return sm0.U(z); }), type: 'points', color: '--bad', r: 5 }], vlines: [{ x: sm0.sN, label: 'NPA', color: '--ok' }, { x: sm0.sA, label: 'ar/R', color: '--na' }], xlim: [0, sm0.len] });
+        pC.update({ series: [{ name: 'verso l\'esterno', x: dyn.hist.t, y: dyn.hist.f, color: '--na', width: 2 }, { name: 'verso l\'interno', x: dyn.hist.t, y: dyn.hist.b, color: '--c1', width: 2 }] });
+      }
+      function stepDyn(dt) {
+        if (!dyn.on || !dyn.sims || !dyn.meshes.length) return;
+        var sm0 = dyn.sims[0], n = Math.min(4000, Math.max(1, Math.round(Math.min(dt, 0.05) * dyn.speed / sm0.dt))), i;
+        dyn.sims.forEach(function (sm) { for (i = 0; i < n; i++) sm.step(dyn.force); });
+        dyn.tNs += n * sm0.dt / 1000;
+        dyn.sims.forEach(function (sm, k) {
+          var arr = dyn.meshes[k], pr = dyn.pores[k]; if (!arr || !pr) return;
+          for (var j = 0; j < arr.length; j++) { if (j < sm.z.length) { arr[j].position.copy(posOnPore(pr, sm.z[j])); arr[j].visible = true; } else arr[j].visible = false; }
+        });
+        if (dyn.tNs - (dyn.lastHist || 0) >= 0.1) {
+          dyn.lastHist = dyn.tNs; var f = 0, b = 0; dyn.sims.forEach(function (sm) { f += sm.fwd; b += sm.bwd; });
+          dyn.hist.t.push(+dyn.tNs.toFixed(2)); dyn.hist.f.push(f); dyn.hist.b.push(b);
+        }
+        statsDyn(false);
+      }
+      /** Vista ravvicinata di un poro, con la proteina tagliata lungo l'asse del canale. */
+      function zoomPore() {
+        var d = st.data; if (!d || !d.pore || !scn) return;
+        var p = d.pore[1], mid = p.pts[Math.floor(p.pts.length / 2)], xp = mid[0] / 10, yp = mid[1] / 10, zp = mid[2] / 10, r = Math.hypot(xp, yp) || 1;
+        var nrm = new THREE.Vector3(-xp / r, 0, yp / r), p0 = new THREE.Vector3(xp, zp, -yp);   // dal poro verso il centro del tetramero (coordinate del mondo)
+        planePore.setFromNormalAndCoplanarPoint(nrm, p0); st.planeMode = 'pore'; st.section = true; tSec.el.querySelector('input').checked = true;
+        clip();
+        var cam = p0.clone().sub(nrm.clone().multiplyScalar(52)); cam.y += 6;
+        scn.controls.minDistance = 8; scn.controls.target.copy(p0); scn.camera.position.copy(cam); scn.controls.update();
+      }
+
       // ------------------------------------------------------------- ciclo di animazione
       if (scn) scn.onFrame(function (dt) {
+        stepDyn(dt);
         if (st.play && st.data && st.data.xyz2) {
           st.dir = st.dir || 1; st.t += st.dir * dt * 0.18;
           if (st.t >= 1) { st.t = 1; st.dir = -1; } else if (st.t <= 0) { st.t = 0; st.dir = 1; }
@@ -292,8 +371,10 @@
         st.marks = true; tMk.set(true, true); st.extras = true; tEx.set(true, true); st.mem = true; tMem.set(true, true);
         st.section = !!o.section; tSec.set(!!o.section, true); st.spin = false; tSpin.set(false, true); if (scn) scn.controls.autoRotate = false;
         if (o.t !== undefined) { st.t = o.t; sT.set(o.t, true); }
+        if (o.force !== undefined) { dyn.force = o.force; sForce.set(o.force, true); }
+        if (o.dyn !== undefined) { dyn.on = o.dyn; tDyn.el.querySelector('input').checked = o.dyn; }
         // pSel.set richiama load() che azzera lo stato: la sezione si applica dopo il caricamento
-        setTimeout(function () { st.section = !!o.section; tSec.set(!!o.section, true); if (o.t !== undefined) { st.t = o.t; sT.set(o.t, true); morph(); } clip(); }, 350);
+        setTimeout(function () { st.section = !!o.section; tSec.set(!!o.section, true); if (o.t !== undefined) { st.t = o.t; sT.set(o.t, true); morph(); } clip(); if (o.zoom) zoomPore(); else if (o.overview) { st.planeMode = 'default'; clip(); } if (o.force !== undefined) { dyn.sims = null; setupDyn(); vis(); } }, 350);
       };
       U.explainer(L, {
         legend: [['#d9480f', 'arancio: filtro / strozzatura / sito attivo'], ['#2e9e5b', 'verde: residui funzionali (NPA, S4, Lys296)'], ['#e0453a', 'rosso: molecole d\'acqua e ossigeno'], ['#7b4fc4', 'viola: K⁺'], ['#e0a82e', 'oro: Na⁺']],
@@ -302,7 +383,10 @@
           return I.lead + ' ' + (I.look || '') + ' Trascina per ruotare, rotellina per lo zoom; <b>«Sezione»</b> taglia la proteina a metà per vedere il poro.';
         },
         experiments: [
-          { label: 'Acquaporina: la fila di acqua', run: function () { go({ prot: 'aqp1', section: true, rep: 'tube', col: 'chain' }); }, why: 'La sezione mostra un poro: le molecole d\'acqua (rosse) stanno in <b>fila indiana</b> fra la strozzatura ar/R (arancio) e i due motivi NPA (verdi) a metà membrana.' },
+          { label: 'Acquaporina: acqua nel poro', run: function () { go({ prot: 'aqp1', rep: 'tube', col: 'chain', zoom: true, force: 0, dyn: true }); }, why: 'Dentro un canale (taglio lungo l\'asse) le molecole d\'acqua si muovono <b>in fila indiana</b>: non possono superarsi, saltano fra le posizioni del poro e superano le due barriere (ar/R e NPA). A riposo attraversano il canale nei due versi in egual numero. <b>È un modello</b>, non una dinamica molecolare: vedi la nota sotto i grafici.' },
+          { label: 'Esterno ipertonico: l\'acqua esce', run: function () { go({ prot: 'aqp1', rep: 'tube', col: 'chain', zoom: true, force: 0.04, dyn: true }); }, why: 'Con più soluti fuori (forza verso l\'extracellulare) il flusso diventa <b>netto verso l\'esterno</b>: gli attraversamenti nel verso opposto quasi spariscono. È l\'osmosi attraverso l\'acquaporina (la cellula si raggrinzisce). La forza usata è molto maggiore di quella fisiologica, per vedere l\'effetto in pochi ns.' },
+          { label: 'Esterno ipotonico: l\'acqua entra', run: function () { go({ prot: 'aqp1', rep: 'tube', col: 'chain', zoom: true, force: -0.04, dyn: true }); }, why: 'Con meno soluti fuori il flusso netto va <b>verso il citoplasma</b>: la cellula si gonfia (come l\'eritrocita in soluzione ipotonica). Nel grafico in alto le molecole spingono sempre nello stesso verso attraverso le barriere.' },
+          { label: 'Acquaporina: la fila di acqua', run: function () { go({ prot: 'aqp1', section: true, rep: 'tube', col: 'chain', overview: true, dyn: false }); }, why: 'La sezione mostra un poro: le molecole d\'acqua (rosse) stanno in <b>fila indiana</b> fra la strozzatura ar/R (arancio) e i due motivi NPA (verdi) a metà membrana.' },
           { label: 'KcsA: gli ioni nel filtro', run: function () { go({ prot: 'kcsa', section: true }); }, why: 'Gli ioni K⁺ deidratati (viola) occupano il filtro TVGYG (arancio): gli ossigeni dello scheletro prendono il posto delle molecole d\'acqua di idratazione.' },
           { label: 'NavAb: sensore e poro', run: function () { go({ prot: 'navab', col: 'rainbow' }); }, why: 'Ogni subunità ha un sensore di voltaggio periferico (S4 con le arginine, verde) e contribuisce al poro centrale con il filtro (arancio). Il colore blu → rosso segue la catena dall\'estremità N alla C.' },
           { label: 'Recettore dell\'ACh: 5 subunità', run: function () { go({ prot: 'nachr', col: 'chain' }); }, why: 'Cinque catene attorno al poro: il grande dominio extracellulare (in alto) porta i siti per l\'ACh, il dominio transmembrana forma il canale.' },
@@ -315,7 +399,7 @@
       });
       /*EXPLAIN-END*/
 
-      return { destroy: function () { st.token++; if (scn) scn.dispose(); } };
+      return { destroy: function () { st.token++; pU.dispose(); pC.dispose(); if (scn) scn.dispose(); } };
     }
   });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

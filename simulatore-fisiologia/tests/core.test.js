@@ -6,7 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 const dir = path.join(__dirname, '..', 'js', 'core');
-['base', 'electro', 'hh', 'cable', 'stoch', 'transport', 'systems'].forEach(f => require(path.join(dir, f + '.js')));
+['base', 'electro', 'hh', 'cable', 'stoch', 'transport', 'systems', 'singlefile'].forEach(f => require(path.join(dir, f + '.js')));
 const F = globalThis.Fisio;
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} non è entro ±${tol} da ${b}`);
@@ -302,4 +302,29 @@ test('Neurone completo (lezione 21): potenziali locali vs potenziale d\'azione',
   const thin = sim(['E1'], 25, { dd: 0.5 });
   assert.ok(thin.mx[thin.c.somaIndex] < far.mx[far.c.somaIndex], 'dendrite sottile: ampiezza al soma minore');
   near(thin.c.lambda_um / far.c.lambda_um, Math.sqrt(0.5), 0.01, 'λ ∝ √d');
+});
+
+test('Acqua in fila singola nel poro (modello browniano, non dinamica molecolare)', () => {
+  const P = { len: 23, sA: 12.7, sN: 6.2, D: 0.4, Ba: 2, Bn: 3 };
+  // niente sorpassi, distanza minima e numero di molecole nel canale (la struttura 1J4N mostra 7 acque per subunità)
+  const a = new F.SingleFile(Object.assign({ seed: 3 }, P)); let nsum = 0, nst = 0, minGap = 99, ordered = true;
+  for (let k = 0; k < 100000; k++) {
+    a.step(0);
+    if (k % 50 === 0) { nsum += a.z.length; nst++; for (let i = 0; i < a.z.length - 1; i++) { const g = a.z[i + 1] - a.z[i]; if (g <= 0) ordered = false; minGap = Math.min(minGap, g); } }
+  }
+  assert.ok(ordered, 'le molecole non si superano');
+  assert.ok(minGap > 2.2, 'distanza minima fra molecole ≈ diametro dell\'acqua, vista ' + minGap);
+  between(nsum / nst, 5, 8, 'molecole d\'acqua nel poro');
+  // equilibrio: attraversamenti nei due versi uguali (bilancio dettagliato) e di ordine ≈ 1 per ns per direzione
+  let fw = 0, bw = 0; const T = 10000, N = 10;
+  for (let s = 1; s <= N; s++) { const m = new F.SingleFile(Object.assign({ seed: 100 + s * 31 }, P)); m.run(T, 0); fw += m.fwd; bw += m.bwd; }
+  assert.ok(Math.abs(fw - bw) < 4 * Math.sqrt(fw + bw), 'equilibrio: ' + fw + ' avanti, ' + bw + ' indietro');
+  between((fw + bw) / 2 / (T * N / 1000), 0.3, 2.5, 'attraversamenti per ns e per direzione a riposo');
+  // con una forza motrice il flusso netto ha il segno della forza e cresce con essa
+  const net = f => { let n = 0; for (let s = 1; s <= 4; s++) { const m = new F.SingleFile(Object.assign({ seed: 500 + s * 17 }, P)); m.run(8000, f); n += m.fwd - m.bwd; } return n / 32; };
+  const n02 = net(0.02), n05 = net(0.05), m05 = net(-0.05);
+  assert.ok(n05 > n02 && n02 > 0.5, 'flusso netto crescente con la forza: ' + n02 + ' → ' + n05);
+  assert.ok(m05 < -2, 'forza negativa → flusso verso l\'interno: ' + m05);
+  // profilo di energia: barriere dove sono i residui
+  assert.ok(a.U(6.2) > a.U(2) && a.U(12.7) > a.U(17), 'barriere a NPA e ar/R');
 });
